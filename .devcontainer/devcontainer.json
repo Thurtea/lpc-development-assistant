@@ -1,0 +1,14 @@
+{
+  "name": "lpc-development-assistant",
+  "image": "mcr.microsoft.com/vscode/devcontainers/rust:1",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "forwardPorts": [1420],
+  "postCreateCommand": "rustup component add rustfmt && cargo build",
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer", "ms-vscode.vscode-node-azure-pack"]
+    }
+  }
+}
