@@ -1,0 +1,21 @@
+# Rust
+target/
+Cargo.lock
+
+# Node/Vite (if tauri ui)
+node_modules/
+dist/
+
+# Generated
+lpc-dev-assistant/gen/
+lpc-dev-assistant/target/
+
+# Data (repos only source, not extracted)
+mud-references/extracted/
+mud-references/*.zip
+mud-references/*.tgz
+mud-references/*.tar.gz
+
+# Logs/Temp
+*.log
+.DS_Store

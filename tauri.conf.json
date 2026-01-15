@@ -1,0 +1,42 @@
+{
+  "productName": "LPC Dev Assistant",
+  "version": "0.1.0",
+  "identifier": "com.lpc-dev-assistant",
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devUrl": null,
+    "frontendDist": "./ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null,
+      "capabilities": ["main"],
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/*", "$RESOURCE/*"]
+      }
+    },
+    "windows": [
+      {
+        "title": "LPC MUD Development Assistant",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "label": "main",
+        "url": "index.html"
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      }
+    }
+  }
+}
