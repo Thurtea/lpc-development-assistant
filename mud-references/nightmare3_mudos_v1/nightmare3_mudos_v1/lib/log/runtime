@@ -1,0 +1,22 @@
+---
+*Bad argument 1 to call_other()
+Expected: string or array or object Got: 0.
+Object: /secure/std/login#0 at line 28
+
+'input_name' at /secure/std/login#0 at line 28
+---
+*Bad argument 1 to replace_string()
+Expected: string Got: 0.
+Object: /secure/std/login#0 at line 96
+
+'input_email' at /secure/std/login#0 at line 96
+---
+*adm/obj/login.real: lstat failed
+Object: /secure/std/login#0 at line 100
+
+'input_email' at /secure/std/login#0 at line 100
+---
+*secure/std/login.real: lstat failed
+Object: /secure/std/login#0 at line 100
+
+'input_email' at /secure/std/login#0 at line 100

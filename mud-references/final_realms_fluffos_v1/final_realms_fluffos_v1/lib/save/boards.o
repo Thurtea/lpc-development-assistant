@@ -1,0 +1,7 @@
+#/obj/handlers/board_handler.c
+boards (["christmas":({}),"commonroom":({}),"development":({}),"newbie":({}),"vehicle":({}),"heaven":({}),"playerinfo":({}),"playerboard":({}),])
+security (["christmas":({"god",}),"commonroom":({"god",}),"development":({"god",}),"newbie":({"god",}),"vehicle":({"god",}),"heaven":({"god",}),"playerinfo":({"god",}),"playerboard":({"god",}),])
+priv ([])
+timeouts ([])
+archives ([])
+num 1

@@ -1,0 +1,60 @@
+Index
+1. The driver
+2. The config file
+3. The start script
+
+==========================================================================
+Section 1 - The driver
+
+The Merentha Lib was developed with MudOS_v22.2b12.  If you wish to make 
+changes to the driver you should use this version, it is the only 
+known version to be 100% compatable.  The MUDlib has not been tested with 
+any other drivers.  Though there is nothing special configured into the
+driver and it should be possible to use any MudOS version above v20.
+
+The driver supplied has pretty much all sefuns needed for day to day
+operations and all memory reporting options enabled.  These options
+require a little more memory and CPU power to run.
+
+You can download the driver source from http://www.mudos.org if you wish,
+the local_options file is included here as well in the /bin/ directory.
+The mudlib does not use either euids or privs and there may be still other
+options unique to the lib.  The local_options file should be copied to the
+driver's source directory and edited from there if you wish to use it when
+recompiling a new driver.
+==========================================================================
+Section 2 - The config file
+ 
+Edit the config file as needed.  Be sure to edit the MUD NAME and 
+directory sections.  You may also wish to edit the port number and other 
+options.
+
+These options were used on Merentha and ran fine with 100+ players
+==========================================================================
+Section 3 - The start script
+
+The start script is rather simple.  It will start your mud and reboot it 
+incase of a crash or reboot.
+
+You must first edit the startscript and make sure the proper directory is 
+used.  Then to run the script you must type
+
+./start lib &
+
+You will then see a message appear saying the MUD is up and running.  
+Ignore the messages about the address server.  This has been disabled in 
+the fact that the address server binary is not supplied.  It is found by 
+myself that the address server is more of a pain then anything else.  If 
+you wish to have an address server you will have to recompile the driver.
+
+In the case that the screen continually scrolls with the same messages 
+over and over again, there has been a problem starting your MUD.  You will 
+have to kill the start process.  Usually this is done by the command:
+
+kill %1
+
+The problem is usually in the start file or the config.lib file.  Be sure
+the pathways of all directories are correct.  The problem could also be
+the Merentha InterMUD system.  I suggest removeing the
+/save/daemons/network.o file and restarting your MUD.  This may fix the
+problem.

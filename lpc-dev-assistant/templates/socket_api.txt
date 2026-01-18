@@ -1,0 +1,43 @@
+Socket API (MudOS)
+
+Overview:
+- LPC sockets mapped to driver-side lpc_socket_t array; callbacks stored per-socket (read/write/close).
+- Callbacks may be function pointers or string names; helper setters: set_read_callback, set_write_callback, set_close_callback.
+- Typical workflow: socket_create -> socket_bind/listen/connect -> socket_accept -> socket_write/socket_read callbacks -> socket_close.
+
+Key behaviors & snippets:
+
+/* set callback: accepts T_FUNCTION or string, manages refs */
+void set_read_callback P2(int, which, svalue_t *, cb) { /* ... */ }
+
+/* create socket: non-blocking, sets S_HEADER, owner is current_object */
+int socket_create P3(enum socket_mode, mode, svalue_t *, read_callback, svalue_t *, close_callback) { /* ... */ }
+
+/* accept: sets nonblocking, initializes new lpc_socks slot, copies callbacks */
+int socket_accept P3(int, fd, svalue_t *, read_callback, svalue_t *, write_callback) { /* ... */ }
+
+/* write: supports MUD/STREAM/DATAGRAM modes, handles partial writes and S_BLOCKED */
+int socket_write P3(int, fd, svalue_t *, message, char *, name) { /* ... */ }
+
+/* central callback invoker: safe_call_function_pointer or safe_apply */
+static void call_callback P3(int, fd, int, what, int, num_arg) { /* ... */ }
+
+/* select handlers invoke callbacks on events */
+void socket_read_select_handler P1(int, fd) { /* ... */ }
+void socket_write_select_handler P1(int, fd) { /* ... */ }
+
+/* close: can defer final close if flushing; triggers close callback if requested */
+int socket_close P2(int, fd, int, flags) { /* ... */ }
+
+Utilities:
+- socket_release/socket_acquire for handing sockets between objects.
+- get_socket_address and socket_status for introspection.
+- assign_socket_owner to create T_OBJECT svalue for socket owner.
+
+Notes:
+- All operations validate fd range, owner permissions, and socket state.
+- Partial writes store remaining buffer in lpc_socks[fd].w_buf and set S_BLOCKED; write handler resumes.
+- Callbacks use S_* flags to indicate whether stored as function pointer or string.
+
+
+Source: mud-references/mudos_v22.2b14-ds2/socket_efuns.c

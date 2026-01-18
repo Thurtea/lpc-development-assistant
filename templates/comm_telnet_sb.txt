@@ -1,0 +1,22 @@
+Telnet SB (subnegotiation) handling
+
+Description:
+Process IAC SB ... SE sequences for options like TTYPE and NAWS; accumulate SB bytes until SE and dispatch accordingly.
+
+Snippet:
+void handle_sb(int fd, unsigned char *buf, int len) {
+    /* buf contains option byte followed by data */
+    unsigned char option = buf[0];
+    unsigned char *data = &buf[1];
+    int data_len = len - 1;
+    switch (option) {
+        case TELNET_TTYPE:
+            /* respond with terminal type */
+            send_terminal_type(fd);
+            break;
+        case TELNET_NAWS:
+            /* parse width/height */
+            handle_naws(fd, data, data_len);
+            break;
+    }
+}

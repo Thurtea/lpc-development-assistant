@@ -1,0 +1,27 @@
+Whatever the law says, so it applies here.
+
+Dead Souls II is Public Domain.
+
+The library distribution (the stuff in lib/) is public domain software. 
+This means that the changes I have made to 
+the lib/ directory are not under anyone's copyright, and you are 
+free to do with it as you will. 
+
+Note that this does not extend to any of the 2.x releases of Dead Souls.
+
+Also note that this does not in any way extend to the MudOS/FluffOS source,
+or the compiled Windows executable.
+The contents of fluffos*/ are NOT public domain. That is driver source,
+and it is copyrighted. The maintainer of that software is Wodan at 
+Discworld, and he is the person you'll want to talk to if you plan
+to do anything with the source other than use it for a game.
+
+To understand the differences between Dead Souls 2.x and Dead Souls II,
+please visit http://dead-souls.net/ds-II-faq.html
+
+Most newcomers to Dead Souls interested in running a mud
+are best served by using the regular version, not this version.
+The regular version can be downloaded from http://lpmuds.net/downloads.html
+
+- Bill Sanchez aka Cratylus @ Dead Souls, aka Cratylus @ Frontiers
+June 25 2008

@@ -1,0 +1,22 @@
+This is a working, updated version of Dead Souls 1.1.
+
+Like the 1998 release, this version of the lib is Public Domain, meaning that the
+changes I have made to the lib/ directory of this distribution are not under anyone's
+copyright, and you are free to do with it as you will.
+
+Note that this does not in any way extend to the FluffOS source. The contents of
+fluffos*/ are NOT public domain. That is driver source, and it is copyrighted. The maintainer
+of that software is Wodan at Discworld, and he is the person you'll want to talk to
+if you plan to do anything with the source other than use it for a game.
+
+This release is very close to being 100% Descartes. Therefore please note that I
+am not responsible for the brilliance you find herein, nor am I to be blamed for
+any of the shortcomings.
+
+This is *VERY OLD CODE*. I provide it as a courtesy to the curious. If you want
+to start a new Dead Souls mud, I strongly encourage you to use the current
+mainstream distribution (as of today, it is 2.6), available at http://dead-souls.net
+
+- Cratylus @ Dead Souls
+November 15, 2007
+

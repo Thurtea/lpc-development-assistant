@@ -1,0 +1,5 @@
+#/secure/ftp_access.c
+positions (["god":1,])
+permissions ([])
+perms (["god":(["/d":3,"/w/god":3,]),])
+make_perms_active 0

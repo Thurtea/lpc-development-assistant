@@ -1,0 +1,66 @@
+Mudlib Development Context (LPC)
+
+This template summarizes patterns and components commonly used in LPC mudlibs. Use this context when asking for mudlib code or design.
+
+1) Object types
+- Rooms: contain exits, descriptions, and lists of contained objects. Support `init()` hooks for players and objects.
+- Items: portable objects with weights, properties, and verbs. Include `id()` and `short()`/`long()` presentation helpers.
+- NPCs: mobile objects with behaviors (heartbeat, combat routines, pathing). Provide basic AI hooks.
+
+2) Command handling
+- Commands are usually implemented by driver-delivered `add_action()`/`add_command()` hooks where a living object registers verbs.
+- Parse command strings into verb + args. Provide helpers for common parsing patterns (e.g., handle `get all`, `get 2.sword`, `drop all except` patterns).
+
+3) Rooms and exits
+- Exits are often mappings from direction strings to object paths or exit objects. Support `query_exit()` to resolve targets and `load_object()` on demand.
+
+4) Data structures
+- Arrays and mappings are primary containers. Use cloning semantics: when returning internal arrays to callers, return copies or provide read-only views.
+
+5) Persistence
+- Save state of key objects (player, persistent world objects) using save_file()/restore_file() patterns. Keep save formats stable and versioned.
+
+6) Security and permissions
+- Use `master.c` or a permissions layer to gate privileged operations. Validate caller credentials for file/efun access.
+
+7) Efuns usage and extension
+- Mudlibs call efuns for low-level operations: object creation, user I/O, file access. Prefer small wrapper functions in mudlib to decouple from driver efun signatures.
+
+8) Patterns and conventions
+- Use descriptive object file paths: /domains/<domain>/room/center
+- Provide README-style comments at top of objects describing purpose and exported functions.
+
+When requesting code, specify expected compatibility (driver ABI), lifetime semantics, and whether the code should be synchronous or event-driven.
+Mudlib Development Context (LPC)
+
+This document gives context for writing a mudlib in LPC: data model, objects, rooms, commands, daemons, and NPC behaviors.
+
+1) Core Concepts
+- Objects: Everything is an object. Objects have properties (variables), functions, and can inherit from other objects.
+- Rooms: Contain objects and players, provide exits, and often implement environmental descriptions and events.
+- Players/Users: Interactive objects connected to network sockets; handle input, output buffering, and session state.
+
+2) File & Inheritance Structure
+- Use clear file layout and descriptive paths for inheritance (e.g., /std/room.c, /std/object.c, /lib/commands/).
+- Favor composition and small reusable modules: daemons for shared services (e.g., login, mail, economy).
+
+3) Commands & Parsing
+- Commands are typically registered handlers mapping verbs to functions. Implement a central parser that tokenizes user input and dispatches to command handlers.
+- Provide argument parsing utilities and permission checks for privileged commands.
+
+4) NPCs & Behaviors
+- NPCs (monsters) often run on heartbeats or scheduled callouts. Provide AI behaviors as modular scripts or state machines.
+- Use event-driven patterns: events for entering/exiting rooms, combat hooks, and timers.
+
+5) Persistence
+- Save object state to disk (or DB) for persistent worlds. Provide serialization hooks and migration strategies for schema changes.
+
+6) Security & Permissions
+- Implement secure gatekeeping for efuns that interact with the OS or driver-level operations.
+- Use user/group or role-based checks when exposing administrative commands.
+
+7) Utilities & Libraries
+- Provide common libraries: string utilities, list/set handling, path resolution, and logging.
+- Include examples of safe string handling and input sanitization.
+
+When asking for mudlib code, expect LPC snippets with clear documentation for hooks, inheritance patterns, and examples showing how to wire objects together.

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LPC MUD Development Assistant</title>
+  <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <style>
+    :root{--bg:#1e1e1e;--fg:#d4d4d4;--accent:#569cd6;--muted:#6a6a6a}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:Segoe UI, Roboto, Arial}
+    .container{max-width:1100px;margin:24px auto;padding:20px;border-radius:8px}
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .select,textarea,button{background:#2a2a2a;color:var(--fg);border:1px solid #333;padding:8px;border-radius:6px}
+    .row{display:flex;gap:12px;align-items:center}
+    textarea{width:100%;height:220px;resize:vertical;padding:12px;font-family:Consolas,monospace}
+    /* allow long tokens or long lines to wrap so the response remains readable */
+    #response{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;background:#151515;padding:12px;border-radius:6px;border:1px solid #222;min-height:200px;margin-top:12px}
+    .button-accent{background:var(--accent);color:#fff;border:none}
+    .small{font-size:12px;color:var(--muted)}
+    .toast { position: fixed; right: 16px; top: 16px; padding: 10px 14px; border-radius: 6px; color: #fff; display: none }
+    .toast.success { background: #2e7d32 }
+    .toast.error { background: #c62828 }
+    /* diagnostics toggle (displayed in header) */
+    .diag-toggle{position:relative;margin-left:12px;z-index:10001;background:rgba(0,0,0,0.6);color:#fff;border:1px solid #333;padding:6px 8px;border-radius:6px;font-size:12px;cursor:pointer}
+    #diagnostics.hidden{display:none}
+    pre.code{overflow:auto}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script>
+</head>
+<body>
+  <script>
+    // Tauri API should be injected automatically by the framework
+    // If it's not available, the app was opened directly (not via Tauri)
+    if (!window.__TAURI__) {
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;left:0;right:0;top:0;background:#b71c1c;color:#fff;padding:10px;text-align:center;z-index:9999;font-weight:bold';
+      el.textContent = '⚠️ Tauri API not injected. Ensure the app runs via cargo tauri dev.';
+      document.addEventListener('DOMContentLoaded', ()=>{ document.body.prepend(el); });
+    }
+  </script>
+
+  <div class="container">
+    <div class="header">
+      <h2 style="margin:0">LPC MUD Development Assistant</h2>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <div class="small">Ollama: <span id="ollama-status">Checking...</span></div>
+        <button id="diag-toggle" class="diag-toggle" title="Toggle diagnostics">Diag</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom:12px">
+      <div style="width:260px">
+        <label class="small">Model</label>
+        <select id="model" class="select" style="width:100%">
+          <option>qwen2.5-coder:7b</option>
+          <option>qwen2.5:7b-instruct</option>
+        </select>
+      </div>
+
+      <div style="width:260px">
+        <label class="small">Context</label>
+        <select id="context" class="select" style="width:100%">
+          <option value="driver">Driver</option>
+          <option value="mudlib">MudLib</option>
+          <option value="efuns">Efuns</option>
+          <option value="references">References</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button id="extract-btn" class="select">Extract Archives</button>
+      </div>
+    </div>
+
+    <label class="small">Question</label>
+    <textarea id="question" placeholder="Write the LPC lexer tokenization code"></textarea>
+
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="ask-btn" class="button-accent">Ask Ollama</button>
+      <div style="flex:1" class="small">Tip: select the coder model for code generation.</div>
+    </div>
+
+    <div id="response" aria-live="polite">Responses appear here</div>
+    <div class="footer" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <button id="copy-btn" class="select">Copy</button>
+      </div>
+      <div id="status-msg" class="small">Ready</div>
+    </div>
+
+    <div id="history" style="margin-top:12px;display:none"></div>
+    <div id="toast" class="toast"></div>
+  </div>
+
+    <!-- Runtime diagnostics (helps detect whether app is running inside Tauri webview) -->
+    <div id="diagnostics" class="hidden" style="position:fixed;right:12px;top:48px;background:rgba(0,0,0,0.6);color:#fff;padding:8px;border-radius:6px;font-size:12px;z-index:10000;max-width:320px;line-height:1.2">
+      <div><strong>Runtime diagnostics</strong></div>
+      <div id="diag-origin">origin: </div>
+      <div id="diag-ua">ua: </div>
+      <div id="diag-tauri">__TAURI__: </div>
+    </div>
+
+  <script>
+  function safeStorage(){
+    try{ localStorage.setItem('__ok__','1'); localStorage.removeItem('__ok__'); return localStorage;}catch(e){try{sessionStorage.setItem('__ok__','1');sessionStorage.removeItem('__ok__');return sessionStorage}catch(e){return null}}
+  }
+
+  function showToast(text, kind='success'){ const t=document.getElementById('toast'); if(!t) return; t.textContent=text; t.className='toast '+kind; t.style.display='block'; setTimeout(()=>t.style.display='none',4000); }
+
+  document.addEventListener('DOMContentLoaded', function initUI(){
+    (async function(){
+      // wait briefly for Tauri to inject its API (avoid race where DOMContentLoaded fires too early)
+      const waitForTauri = async (timeout = 2000, interval = 100) => {
+        const start = Date.now();
+        while (Date.now() - start < timeout) {
+          if (window.__TAURI__) return true;
+          await new Promise(r => setTimeout(r, interval));
+        }
+        return !!window.__TAURI__;
+      };
+
+      const tauriReady = await waitForTauri();
+      console.log('tauriReady:', tauriReady, 'window.__TAURI__ keys:', window.__TAURI__ ? Object.keys(window.__TAURI__) : null);
+      // populate runtime diagnostics box
+      try{
+        const elOrigin = document.getElementById('diag-origin'); if(elOrigin) elOrigin.textContent = 'origin: '+location.href;
+        const elUA = document.getElementById('diag-ua'); if(elUA) elUA.textContent = 'ua: '+(navigator.userAgent||'');
+        const elT = document.getElementById('diag-tauri'); if(elT) elT.textContent = '__TAURI__: '+(!!window.__TAURI__);
+      }catch(e){console.warn('diag update failed', e)}
+
+      // diagnostics toggle state (persist in localStorage when available)
+      try{
+        const diagEl = document.getElementById('diagnostics');
+        const toggleBtn = document.getElementById('diag-toggle');
+        const storage = safeStorage();
+        const stored = storage ? storage.getItem('diagVisible') : null;
+        const visible = stored === '1';
+        if(diagEl){ if(visible) diagEl.classList.remove('hidden'); else diagEl.classList.add('hidden'); }
+        if(toggleBtn){ toggleBtn.addEventListener('click', ()=>{
+          if(!diagEl) return;
+          const isHidden = diagEl.classList.toggle('hidden');
+          if(storage) storage.setItem('diagVisible', isHidden ? '0' : '1');
+        }); }
+      }catch(e){console.warn('diag toggle init failed', e)}
+
+      // Tauri 2.x: invoke is at core.invoke, not top-level
+      const invoke = window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke || function(){ return Promise.reject(new Error('Tauri invoke not available')); };
+
+      const modelSel = document.getElementById('model');
+      const contextSel = document.getElementById('context');
+      const askBtn = document.getElementById('ask-btn');
+      const extractBtn = document.getElementById('extract-btn');
+      const copyBtn = document.getElementById('copy-btn');
+      const responseEl = document.getElementById('response');
+      const statusMsg = document.getElementById('status-msg');
+
+      async function checkOllama(){
+        const status = document.getElementById('ollama-status'); if(!status) return;
+        try{
+          const models = await invoke('list_models');
+          console.log('list_models result:', models);
+          const modelSel = document.getElementById('model');
+          if(modelSel){
+            // clear existing
+            modelSel.innerHTML = '';
+            if(Array.isArray(models) && models.length>0){
+              models.forEach(m=>{ const o=document.createElement('option'); o.value=o.textContent=m; modelSel.appendChild(o); });
+              status.textContent='Connected'; status.style.color='#8f8';
+            } else {
+              const o=document.createElement('option'); o.textContent='(no models)'; modelSel.appendChild(o);
+              status.textContent='No models'; status.style.color='#fa6';
+            }
+          }
+        }catch(e){
+          status.textContent='Disconnected'; status.style.color='#f66'; console.error('list_models invoke failed:', e);
+        }
+
+        // populate contexts from workspace templates
+        try{
+          const ctxs = await invoke('list_contexts');
+          const contextSel = document.getElementById('context');
+          if(contextSel){
+            contextSel.innerHTML = '';
+            if(Array.isArray(ctxs) && ctxs.length>0){
+              ctxs.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c.charAt(0).toUpperCase()+c.slice(1); contextSel.appendChild(o); });
+            } else {
+              const o=document.createElement('option'); o.value='none'; o.textContent='None'; contextSel.appendChild(o);
+            }
+          }
+        }catch(e){ console.warn('list_contexts failed', e); }
+      }
+
+      async function doStreamAsk(){
+        const model = modelSel?.value; const context= contextSel?.value || null; const question = document.getElementById('question')?.value || '';
+        if(!question.trim()){ showToast('Enter a question','error'); return; }
+        statusMsg.textContent='Streaming...'; responseEl.textContent='';
+
+        // listeners
+        const handlers = [];
+        if (window.__TAURI__) {
+          const tokenL = await window.__TAURI__.event.listen('ollama-token', e=>{ const p = e.payload||''; responseEl.textContent += p; responseEl.scrollTop = responseEl.scrollHeight; }); handlers.push(tokenL);
+          const errL = await window.__TAURI__.event.listen('ollama-error', e=>{ responseEl.textContent = 'Error: '+(e.payload||''); statusMsg.textContent='Error'; showToast('Stream error','error'); }); handlers.push(errL);
+          const doneL = await window.__TAURI__.event.listen('ollama-done', async ()=>{ statusMsg.textContent='Done'; showToast('Stream complete','success'); // save
+            const text = responseEl.textContent || '';
+            const ts = new Date().toISOString().replace(/[:.]/g,'').replace(/T/,'_').split('Z')[0];
+            const filename = `heart_beat_${ts}.c`;
+            try{ await invoke('save_response', { filename, contents: text }); showToast('Saved '+filename,'success'); }catch(e){ showToast('Save failed','error'); }
+            // cleanup
+            for(const u of handlers) try{ u(); }catch(e){}
+          }); handlers.push(doneL);
+        }
+
+        try{
+          const payload = { model, question };
+          // include both naming styles to tolerate handler param name differences
+          payload.context_type = context;
+          payload.contextType = context;
+          await invoke('ask_ollama_stream', payload);
+        }catch(e){
+          console.error('Invoke failed:', e);
+          responseEl.innerHTML = `<div class="error">ERROR: ${e?.message || String(e)}</div>`;
+          showToast('Stream request failed','error');
+          for(const u of handlers) try{ u(); }catch(e){}
+        }
+      }
+
+      askBtn?.addEventListener('click', doStreamAsk);
+      extractBtn?.addEventListener('click', async ()=>{
+        if(!extractBtn) return;
+        // Disable to avoid duplicate extraction requests and provide feedback
+        extractBtn.disabled = true;
+        const origText = extractBtn.textContent;
+        extractBtn.textContent = 'Extracting...';
+        statusMsg.textContent = 'Extracting...';
+        try{
+          const r = await invoke('extract_references');
+          statusMsg.textContent = r || 'Extraction completed';
+          showToast('Extraction complete','success');
+        }catch(e){
+          statusMsg.textContent = 'Extraction failed';
+          showToast('Extraction failed','error');
+          console.error('extract_references failed', e);
+        }finally{
+          extractBtn.disabled = false;
+          extractBtn.textContent = origText;
+        }
+      });
+      copyBtn?.addEventListener('click', ()=>{ try{ navigator.clipboard.writeText(responseEl.textContent||''); showToast('Copied','success'); }catch(e){ showToast('Copy failed','error'); } });
+
+      checkOllama();
+    })();
+  });
+  </script>
+</body>
+</html>

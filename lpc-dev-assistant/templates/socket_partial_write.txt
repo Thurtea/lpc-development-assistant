@@ -1,0 +1,26 @@
+Socket partial write handling
+
+Description:
+When send() returns EWOULDBLOCK or partial bytes written, the remainder is stored in the socket's w_buf and the socket is marked S_BLOCKED so the write handler retries later.
+
+Snippet:
+int socket_write P3(int, fd, svalue_t *, message, char *, name) {
+    int sent = send(fd, buf, len, 0);
+    if (sent < 0) {
+        if (errno == EWOULDBLOCK) {
+            /* save remainder */
+            lpc_socks[fd].w_buf = copy_buffer(buf + 0, len);
+            lpc_socks[fd].w_off = 0;
+            lpc_socks[fd].flags |= S_BLOCKED;
+            return 0;
+        }
+        return -1;
+    }
+    if (sent < len) {
+        /* partial */
+        lpc_socks[fd].w_buf = copy_buffer(buf + sent, len - sent);
+        lpc_socks[fd].w_off = 0;
+        lpc_socks[fd].flags |= S_BLOCKED;
+    }
+    return sent;
+}

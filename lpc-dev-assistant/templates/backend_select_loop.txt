@@ -1,0 +1,21 @@
+Backend select loop (simplified)
+
+Description:
+Core pattern: build read/write fd_sets, call select with timeout, then process ready fds including external ports, user fds and lpc_socks.
+
+Snippet:
+void backend() {
+    fd_set readmask, writemask;
+    struct timeval timeout;
+    while (1) {
+        FD_ZERO(&readmask);
+        FD_ZERO(&writemask);
+        make_selectmasks(&readmask, &writemask);
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+        int nb = select(maxfd+1, &readmask, &writemask, NULL, &timeout);
+        if (nb > 0) process_io(&readmask, &writemask);
+        /* process commands and heartbeats */
+        if (heart_beat_flag) call_heart_beat();
+    }
+}

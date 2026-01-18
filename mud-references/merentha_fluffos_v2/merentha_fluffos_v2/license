@@ -1,0 +1,41 @@
+Index:
+1. The driver
+2. The lib
+3. Startup Notes - Trouble Shooting
+==========================================================================
+Section 1: The driver
+
+The driver used with the Meretha Lib is MudOS_v22.2b12.  If you wish to 
+recompile the driver you should download and use this driver.
+==========================================================================
+Section 2: The lib
+
+The lib is defined as everyting in the dev/lib directory.  All code in the 
+lib has been writen by Peter Sadlon and all is his own original work.  You 
+are free to use the lib if you wish, as long as you follow the following 
+rules:
+  1) You are not allowed to use the lib for profit
+  2) You are not allowed to redistribute the lib as anyone's work but mine
+  3) You may not change the name of the lib 
+
+For more information and a more complete license agreement read the 
+dev/lib/doc/AGREEMENT file.  The dev/lib/doc directory also contains 
+documentation on the lib itself which you may find useful.
+
+The Merentha Lib is distributed in several stages of development.  This 
+information is stored in the VERSIONS file of the directory mentioned 
+above.  The different versions may be of more or less use to certain 
+people depending on how much of their own lib they wish to create 
+themselves.
+==========================================================================
+Section 3: Startup Notes - Trouble Shooting
+
+In general a command like ./start lib will start your MUD.  This section
+lists some problems I've discovered and their solutions:
+
+MUD starts/crashes and reboots - This could be because of problems with
+your machine's internet connection, or if it isn't conneted at all.  The
+problem is that Merentha InterMUD System (MIS) attempts to start up and
+with no Internet connection there are problems.  To fix this remove the
+/save/daemons/network.o file and restart your MUD.  When this file is
+deleted there are no other MUDs to contact and it should start fine.

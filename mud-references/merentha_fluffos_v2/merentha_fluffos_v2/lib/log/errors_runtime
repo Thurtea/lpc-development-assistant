@@ -1,0 +1,259 @@
+----------
+Thu Jan 23 10:31:57 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:33:05 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:34:12 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:35:20 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:36:28 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:37:35 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:38:43 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:39:50 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:40:58 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Thu Jan 23 10:42:05 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 01:44:56 2003
+Error: *Bad right type to -.
+
+Current object: /std/inheritables/monster#9
+Current program: /std/inheritables/living.c
+File: "/std/inheritables/living.c" Line: 85
+"Line: 86  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 23  File: "/cmds/admin/call.c" Object: /cmds/admin/call Program: "/cmds/admin/call.c"
+Line: 199  File: "/std/inheritables/living.c" Object: /std/inheritables/monster#9 Program: "/std/inheritables/living.c"
+Line: 85  File: "/std/inheritables/living.c" Object: /std/inheritables/monster#9 Program: "/std/inheritables/living.c""
+----------
+----------
+Sun Jan 26 01:52:55 2003
+Error: *Error in loading object '/realms/petrarch/eval'
+
+Current object: /cmds/admin/eval
+Current program: /cmds/admin/eval.c
+File: "/cmds/admin/eval.c" Line: 19
+"Line: 86  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 19  File: "/cmds/admin/eval.c" Object: /cmds/admin/eval Program: "/cmds/admin/eval.c""
+----------
+----------
+Sun Jan 26 01:53:17 2003
+Error: *Error in loading object '/realms/petrarch/eval'
+
+Current object: /cmds/admin/eval
+Current program: /cmds/admin/eval.c
+File: "/cmds/admin/eval.c" Line: 19
+"Line: 86  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 19  File: "/cmds/admin/eval.c" Object: /cmds/admin/eval Program: "/cmds/admin/eval.c""
+----------
+----------
+Sun Jan 26 01:57:26 2003
+Error: *Error in loading object '/realms/petrarch/eval'
+
+Current object: /cmds/admin/eval
+Current program: /cmds/admin/eval.c
+File: "/cmds/admin/eval.c" Line: 19
+"Line: 86  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 19  File: "/cmds/admin/eval.c" Object: /cmds/admin/eval Program: "/cmds/admin/eval.c""
+----------
+----------
+Sun Jan 26 02:08:17 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 02:09:24 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 02:10:32 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 02:11:40 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 02:12:47 2003
+Error: *Cannot index type 'int' using [ .. ] operator.
+
+Current object: /daemon/finger
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 151
+"Line: 161  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c"
+Line: 151  File: "/std/inheritables/user.c" Object: /daemon/finger Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 23:18:57 2003
+Error: *Error in loading object '/std/inheritables/living'
+
+Current object: /std/login/login#0
+Current program: /std/login/login.c
+File: "/std/login/login.c" Line: 74
+"Line: 110  File: "/std/login/login.c" Object: /std/login/login#0 Program: "/std/login/login.c"
+Line: 74  File: "/std/login/login.c" Object: /std/login/login#0 Program: "/std/login/login.c""
+----------
+----------
+Sun Jan 26 23:51:27 2003
+Error: *Left hand side of += is a number (or zero); right side is not a number.
+
+Current object: /std/inheritables/user#1
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 59
+"Line: 135  File: "/std/login/login.c" Object: /std/login/login#0 Program: "/std/login/login.c"
+Line: 186  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 59  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 23:51:32 2003
+Error: *Left hand side of += is a number (or zero); right side is not a number.
+
+Current object: /std/inheritables/user#1
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 59
+"Line: 58  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 59  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 23:51:35 2003
+Error: *Left hand side of += is a number (or zero); right side is not a number.
+
+Current object: /std/inheritables/user#1
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 59
+"Line: 59  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 23:51:37 2003
+Error: *Left hand side of += is a number (or zero); right side is not a number.
+
+Current object: /std/inheritables/user#1
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 59
+"Line: 59  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 23:51:40 2003
+Error: *Left hand side of += is a number (or zero); right side is not a number.
+
+Current object: /std/inheritables/user#1
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 59
+"Line: 59  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c""
+----------
+----------
+Sun Jan 26 23:51:40 2003
+Error: *Left hand side of += is a number (or zero); right side is not a number.
+
+Current object: /std/inheritables/user#1
+Current program: /std/inheritables/user.c
+File: "/std/inheritables/user.c" Line: 59
+"Line: 59  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c""
+----------

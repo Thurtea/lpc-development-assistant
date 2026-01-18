@@ -61,6 +61,39 @@ fn save_response(filename: String, contents: String) -> Result<String, String> {
     Ok(format!("Saved to {}", path.display()))
 }
 
+// New template-related tauri commands
+#[tauri::command]
+async fn get_template(name: String) -> Result<String, String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let cm = ContextManager::new(PathBuf::from(cwd));
+    cm.ensure_templates_exist().map_err(|e| e.to_string())?;
+
+    match name.as_str() {
+        "simul_efun" => cm.load_simul_efun_context().map_err(|e| e.to_string()),
+        "master_api" => cm.load_master_api_context().map_err(|e| e.to_string()),
+        "socket_api" => cm.load_socket_api_context().map_err(|e| e.to_string()),
+        "comm" => cm.load_comm_context().map_err(|e| e.to_string()),
+        "backend" => cm.load_backend_context().map_err(|e| e.to_string()),
+        other => cm.load_template_by_filename(other).map_err(|e| e.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn list_templates() -> Result<Vec<String>, String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let cm = ContextManager::new(PathBuf::from(cwd));
+    cm.ensure_templates_exist().map_err(|e| e.to_string())?;
+
+    let mut names = Vec::new();
+    for entry in std::fs::read_dir(cm.templates_path).map_err(|e| e.to_string())? {
+        let e = entry.map_err(|e| e.to_string())?;
+        if let Some(name) = e.file_name().to_str() {
+            names.push(name.to_string());
+        }
+    }
+    Ok(names)
+}
+
 #[cfg(feature = "with_tauri")]
 fn main() {
     tauri::Builder::default()
@@ -70,7 +103,9 @@ fn main() {
             extract_references,
             search_examples,
             save_response,
-            ask_ollama_stream
+            ask_ollama_stream,
+            get_template,
+            list_templates
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

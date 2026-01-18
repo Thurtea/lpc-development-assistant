@@ -117,6 +117,43 @@ impl ContextManager {
             .context("Failed to load reference sources context")
     }
 
+    pub fn load_simul_efun_context(&self) -> Result<String> {
+        let template_path = self.templates_path.join("simul_efun_summary.txt");
+        fs::read_to_string(&template_path)
+            .context("Failed to load simul_efun summary context")
+    }
+
+    pub fn load_master_api_context(&self) -> Result<String> {
+        let template_path = self.templates_path.join("master_api.txt");
+        fs::read_to_string(&template_path)
+            .context("Failed to load master api context")
+    }
+
+    pub fn load_socket_api_context(&self) -> Result<String> {
+        let template_path = self.templates_path.join("socket_api.txt");
+        fs::read_to_string(&template_path)
+            .context("Failed to load socket api context")
+    }
+
+    pub fn load_comm_context(&self) -> Result<String> {
+        let template_path = self.templates_path.join("comm_summary.txt");
+        fs::read_to_string(&template_path)
+            .context("Failed to load comm summary context")
+    }
+
+    pub fn load_backend_context(&self) -> Result<String> {
+        let template_path = self.templates_path.join("backend_loop.txt");
+        fs::read_to_string(&template_path)
+            .context("Failed to load backend loop context")
+    }
+
+    // Generic loader by filename for small snippet runners
+    pub fn load_template_by_filename(&self, filename: &str) -> Result<String> {
+        let template_path = self.templates_path.join(filename);
+        fs::read_to_string(&template_path)
+            .with_context(|| format!("Failed to load template {}", filename))
+    }
+
     pub fn search_code_examples(&self, keyword: &str) -> Vec<PathBuf> {
         let mut results = Vec::new();
         let keyword_lower = keyword.to_lowercase();
@@ -161,7 +198,18 @@ impl ContextManager {
         self.create_template_if_missing("mudlib_context.txt", include_str!("../templates/mudlib_context.txt"))?;
         self.create_template_if_missing("efuns_context.txt", include_str!("../templates/efuns_context.txt"))?;
         self.create_template_if_missing("reference_sources.txt", include_str!("../templates/reference_sources.txt"))?;
-        
+        self.create_template_if_missing("simul_efun_summary.txt", include_str!("../templates/simul_efun_summary.txt"))?;
+        self.create_template_if_missing("master_api.txt", include_str!("../templates/master_api.txt"))?;
+        self.create_template_if_missing("socket_api.txt", include_str!("../templates/socket_api.txt"))?;
+        self.create_template_if_missing("comm_summary.txt", include_str!("../templates/comm_summary.txt"))?;
+        self.create_template_if_missing("backend_loop.txt", include_str!("../templates/backend_loop.txt"))?;
+
+        // Additional snippet templates
+        self.create_template_if_missing("socket_accept_flow.txt", include_str!("../templates/socket_accept_flow.txt"))?;
+        self.create_template_if_missing("socket_partial_write.txt", include_str!("../templates/socket_partial_write.txt"))?;
+        self.create_template_if_missing("comm_telnet_sb.txt", include_str!("../templates/comm_telnet_sb.txt"))?;
+        self.create_template_if_missing("backend_select_loop.txt", include_str!("../templates/backend_select_loop.txt"))?;
+
         Ok(())
     }
 

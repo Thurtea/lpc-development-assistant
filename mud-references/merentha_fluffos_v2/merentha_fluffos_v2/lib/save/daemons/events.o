@@ -1,0 +1,2 @@
+#/daemon/events.c
+__Events (["reboot":({1200948709,"/daemon/reboot",({"reboot",10,}),}),])

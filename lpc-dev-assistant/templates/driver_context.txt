@@ -1,0 +1,92 @@
+Driver Development Context (C) for LPC MUD Driver
+
+This document provides context for implementing a MUD driver in C. It covers common subsystems and patterns used by historic drivers (e.g., DGD, FluffOS, MudOS, Nirvana/Nightmare derivatives).
+
+1) High-level architecture
+- The driver implements a runtime for executing LPC-like bytecode: lexer -> parser -> compiler -> virtual machine (VM) -> object system.
+- Objects are the primary runtime unit. Each object contains a program (bytecode/instructions), properties, and an instance state.
+
+2) Memory and object management
+- Use reference counting or a GC to manage program and object lifetimes. Many drivers use simple refcounts for C-allocated structures.
+- Keep a global object table mapping object names to pointers; include locking or epoch-based safety if multithreaded.
+- Persisted objects: serialize program data and state; allow for lazy reload on demand.
+
+3) Parser and lexer
+- Lexical analysis: tokenization into identifiers, numbers, strings, punctuation, comments, and preprocessor directives.
+- Build a token stream with token type, text, line/column location for error reporting.
+- Use a hand-written or generated recursive-descent parser to produce an AST. Keep AST nodes compact (enum + data struct).
+
+4) Compilation and bytecode
+- The compiler transforms AST into a compact opcode stream. Include an instruction for common operations: push, pop, call, ret, jump, conditional jump, load_const, load_local, store_local, call_efun.
+- Maintain a constant pool (strings, numbers, identifiers) to reduce duplication.
+- Opcode format: a one-byte opcode + operands (endianness-consistent). Use a short header with magic and version.
+
+5) Virtual machine execution
+- Implement an evaluation stack, call frames, and instruction pointer per frame.
+- Support native (efun) calls via a dispatch table of function name -> C function pointer.
+- Exception handling: provide longjmp/setjmp or explicit error-returning instructions to unwind stacks safely.
+
+6) Efuns and C interface
+- Efuns (external functions) are implemented in C and invoked from bytecode. Provide a robust, type-checked calling convention and stack marshalling.
+- Expose helper APIs for manipulating objects, properties, strings, arrays, mappings, and error reporting.
+
+7) Concurrency and I/O
+- Drivers often multiplex user I/O via a select/poll loop or async reactor. Keep driver internals reentrant where needed.
+- Use non-blocking sockets with event-driven callbacks for descriptors.
+
+8) Debugging and error reporting
+- Emit helpful compile-time and runtime error messages with file/line data.
+- Include optional debug build flags to enable traces of bytecode execution and GC statistics.
+
+9) Build and ABI considerations
+- Keep public driver headers stable for efuns and module interfaces.
+- Use clear ownership semantics for pointers passed across module boundaries.
+
+When crafting C code for the lexer, parser, or VM, prefer clear, well-named functions and small helpers, include detailed comments, and avoid premature micro-optimizations. Provide defensive checks for malformed input and return helpful diagnostics.
+Driver Development Context (C)
+
+This document provides context for implementing an LPC MUD driver in C. It covers architecture, lexer/parser design, VM loop, object management, memory and GC considerations, efuns, and common interfaces.
+
+1) Architecture Overview
+- The driver is responsible for loading and executing LPC bytecode, compiling LPC sources to bytecode, managing objects, handling efuns (native functions), and providing a runtime VM with scheduling for callouts and heartbeats.
+- Typical components: lexer, parser, compiler, bytecode VM, object manager, memory allocator/GC, native efuns, I/O and network glue.
+
+2) Lexer & Parser
+- Lexer responsibilities: tokenizing LPC source into identifiers, literals (strings, numbers), operators, punctuation, and comments. Support escape sequences in strings and multi-line heredoc style if present.
+- Keep token types explicit (e.g., TOK_IDENT, TOK_NUMBER, TOK_STRING, TOK_PLUS, TOK_MINUS, TOK_LBRACE, TOK_RBRACE).
+- Design the lexer to be reentrant or provide clear buffer/state for incremental parsing during includes.
+- Parser: traditionally recursive-descent for LPC due to contextual rules; produce an AST representing program structure, function defs, variable declarations, control flow constructs.
+
+3) Compiler & Bytecode
+- Define an intermediate representation from AST to optimized bytecode. Common instructions: push_const, load_var, store_var, call_function, call_efun, jump, jump_if_false, return, trap/raise_error.
+- Manage symbol tables and scoping (object-level variables vs. function-local).
+- Include debug info mapping bytecode offsets to source locations for runtime error reporting.
+
+4) Virtual Machine
+- Stack-based VM is common; manage operand stack, call frames, program counter, and exception frames.
+- Implement an efficient call frame layout: pointers to function, instruction pointer, local variables, and linkage to previous frame.
+- Implement safe C-to-LPC transitions for efuns and external calls.
+
+5) Object Manager
+- Load and unlink objects dynamically. Track reference counts or roots for GC.
+- Keep per-object properties: program pointer, instance variables, flags (cloned, swapped), timestamps, and pointers to children/owners for hierarchical cleanup.
+- Support swap-to-disk for large worlds if desired.
+
+6) Efuns
+- Efuns are C-implemented primitives callable from LPC. Provide a registration table mapping names to C function pointers and arity signatures.
+- Provide marshalling/unmarshalling between LPC runtime values and C representations.
+- Examples: write(), say(), find_object(), clone_object(), call_out(), remove_interactive(), add_action().
+
+7) Memory & GC
+- Choose GC strategy: reference-counting with cycle detection, or tracing (mark-and-sweep). Keep object headers with mark bits and roots from stack, global/static objects, and C-held references.
+- Minimize fragmentation and provide allocation arenas for small frequently-allocated objects.
+
+8) Error handling & Security
+- Runtime error reporting should include object, function, file, and line number when available.
+- Sandboxing: restrict efuns or provide privilege levels to prevent malicious LPC code from performing unsafe operations.
+
+9) Build & Integration
+- Provide a modular C API for embedding/testing the driver, exposing init(), shutdown(), evaluate_file(), and run() hooks.
+- Keep thread-safety in mind if integrating async I/O; prefer single-threaded VM with event loop or carefully synchronized subsystems.
+
+When generating code, produce clear, idiomatic C with comments explaining data structures, invariants, and ownership rules. Provide compile-time configuration for debug vs release builds and include simple unit-testable components (e.g., lexer/tokenizer unit tests).

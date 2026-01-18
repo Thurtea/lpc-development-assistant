@@ -1,0 +1,18 @@
+#/obj/handlers/weather.c
+map_prop ([])
+timed_prop ([])
+labels ({})
+value 0
+resale_value 0
+stolen_modifier 0
+create_me "chrisy"
+coldarr ({({71,60,}),({-164,116,}),({-64,-63,}),})
+cloudarr ({({132,70,}),({-74,-156,}),({94,-104,}),})
+rainarr ({({101,-120,}),({85,-121,}),({95,-9,}),})
+div 10
+year 7
+timeofyear 102
+mooncycle 4
+moonoff 27
+timeofday 0
+global_climate ({0,0,0,})

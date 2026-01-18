@@ -1,0 +1,100 @@
+----------
+Thu Jan 23 10:12:34 2003
+/cmds/player/skills.c line 31: Undefined variable 'this_player'
+----------
+----------
+Thu Jan 23 10:12:34 2003
+/cmds/player/skills.c line 31: Undefined variable 'this_player'
+----------
+----------
+Thu Jan 23 10:13:39 2003
+/cmds/player/skills.c line 32: parse error
+----------
+----------
+Thu Jan 23 10:13:39 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:39 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:39 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:39 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:39 2003
+/cmds/player/skills.c line 53: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:41 2003
+/cmds/player/skills.c line 32: parse error
+----------
+----------
+Thu Jan 23 10:13:41 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:41 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:41 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:41 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:41 2003
+/cmds/player/skills.c line 53: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:44 2003
+/cmds/player/skills.c line 32: parse error
+----------
+----------
+Thu Jan 23 10:13:44 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:44 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:44 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:44 2003
+/cmds/player/skills.c line 52: Illegal character (hex 5c) '\'
+----------
+----------
+Thu Jan 23 10:13:44 2003
+/cmds/player/skills.c line 53: Illegal character (hex 5c) '\'
+----------
+----------
+Sun Jan 26 01:52:55 2003
+/realms/petrarch/eval.c line 1: parse error
+----------
+----------
+Sun Jan 26 01:53:17 2003
+/realms/petrarch/eval.c line 1: parse error
+----------
+----------
+Sun Jan 26 01:57:26 2003
+/realms/petrarch/eval.c line 1: parse error
+----------
+----------
+Sun Jan 26 23:18:57 2003
+/std/inheritables/living.c line 312: parse error
+----------
+----------
+Sun Jan 26 23:18:57 2003
+/std/inheritables/living.c line 319: Illegal LHS
+----------

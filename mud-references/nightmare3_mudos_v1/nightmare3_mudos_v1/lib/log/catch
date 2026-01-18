@@ -1,0 +1,80 @@
+---
+*Index out of bounds
+Object: /secure/daemon/letters at line 42
+
+'preload' at /secure/daemon/master at line 133
+'CATCH' at /secure/daemon/master at line 133
+'create' at /secure/daemon/letters at line 42
+---
+*Failed to load file: secure/save/users/m/ministry
+Object: /secure/SimulEfun/SimulEfun at secure/SimulEfun/load_object.c:14
+
+'input_name' at /secure/std/login#0 at line 27
+'player_object' at /secure/daemon/master at line 555
+'CATCH' at /secure/daemon/master at line 555
+'load_object' at /secure/SimulEfun/SimulEfun at secure/SimulEfun/load_object.c:14
+'CATCH' at /secure/SimulEfun/SimulEfun at secure/SimulEfun/load_object.c:14
+---
+*Index out of bounds
+Object: /secure/daemon/letters at line 42
+
+'preload' at /secure/daemon/master at line 133
+'CATCH' at /secure/daemon/master at line 133
+'create' at /secure/daemon/letters at line 42
+---
+*Index out of bounds
+Object: /secure/daemon/letters at line 42
+
+'preload' at /secure/daemon/master at line 133
+'CATCH' at /secure/daemon/master at line 133
+'create' at /secure/daemon/letters at line 42
+---
+*Index out of bounds
+Object: /secure/daemon/letters at line 42
+
+'preload' at /secure/daemon/master at line 133
+'CATCH' at /secure/daemon/master at line 133
+'create' at /secure/daemon/letters at line 42
+---
+*Bad argument 2 to message()
+Expected: string Got: 0.
+Object: /daemon/news at line 26
+
+'get_password' at /secure/std/login#2 at line 143
+'exec_user' at /secure/std/login#2 at line 221
+'CATCH' at /secure/std/login#2 at line 221
+'setup' at /secure/save/users/m/melor (std/user.c) at line 348
+'read_news' at /daemon/news at line 26
+---
+*Failed to load file: realms/manny/guild/room/void
+Object: /domains/Praxis/square at line 36
+
+'pick' at /domains/Praxis/setter at line 80
+'move_player' at /secure/save/users/m/melor (std/user.c) at line 184
+'move' at /secure/save/users/m/melor (std/Object.c) at line 51
+'CATCH' at /secure/save/users/m/melor (std/Object.c) at line 51
+'create' at /domains/Praxis/square at line 36
+---
+*Index out of bounds
+Object: /secure/daemon/letters at line 42
+
+'preload' at /secure/daemon/master at line 133
+'CATCH' at /secure/daemon/master at line 133
+'create' at /secure/daemon/letters at line 42
+---
+*Index out of bounds
+Object: /secure/daemon/letters at line 42
+
+'preload' at /secure/daemon/master at line 133
+'CATCH' at /secure/daemon/master at line 133
+'create' at /secure/daemon/letters at line 42
+---
+*Bad argument 2 to message()
+Expected: string Got: 0.
+Object: /daemon/news at line 26
+
+'get_password' at /secure/std/login#4 at line 143
+'exec_user' at /secure/std/login#4 at line 221
+'CATCH' at /secure/std/login#4 at line 221
+'setup' at /secure/save/users/m/misty (std/user.c) at line 348
+'read_news' at /daemon/news at line 26

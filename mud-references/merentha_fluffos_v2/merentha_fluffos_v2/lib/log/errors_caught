@@ -1,0 +1,270 @@
+----------
+Thu Jan 23 10:05:27 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Thu Jan 23 10:06:51 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Thu Jan 23 10:12:34 2003
+*Error caught
+Error: *Error in loading object '/cmds/player/skills'
+
+Current object: /cmds/admin/update
+Current program: /cmds/admin/update.c
+File: "/cmds/admin/update.c" Line: 33
+"Line: 86  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 33  File: "/cmds/admin/update.c" Object: /cmds/admin/update Program: "/cmds/admin/update.c"
+Line: 33  File: "/cmds/admin/update.c" Object: /cmds/admin/update Program: "/cmds/admin/update.c""
+----------
+----------
+Thu Jan 23 10:12:34 2003
+*Error caught
+Error: *Error in loading object '/cmds/player/skills'
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 75  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Thu Jan 23 10:13:39 2003
+*Error caught
+Error: *Error in loading object '/cmds/player/skills'
+
+Current object: /cmds/admin/update
+Current program: /cmds/admin/update.c
+File: "/cmds/admin/update.c" Line: 33
+"Line: 86  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 33  File: "/cmds/admin/update.c" Object: /cmds/admin/update Program: "/cmds/admin/update.c"
+Line: 33  File: "/cmds/admin/update.c" Object: /cmds/admin/update Program: "/cmds/admin/update.c""
+----------
+----------
+Thu Jan 23 10:13:41 2003
+*Error caught
+Error: *Error in loading object '/cmds/player/skills'
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 75  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Thu Jan 23 10:13:44 2003
+*Error caught
+Error: *Error in loading object '/cmds/player/skills'
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 75  File: "/std/inheritables/user.c" Object: /std/inheritables/user#1 Program: "/std/inheritables/user.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Thu Jan 23 10:42:43 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 01:25:35 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 01:32:04 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 01:35:53 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 01:51:22 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 01:56:26 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 02:02:53 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 02:04:37 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 23:11:55 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 23:18:55 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 23:19:21 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 23:23:48 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------
+----------
+Sun Jan 26 23:51:24 2003
+*Error caught
+Error: *call_other() couldn't find object
+
+Current object: /sefun/sefun
+Current program: /sefun/sefun.c
+File: "/sefun/objects.c" Line: 4
+"Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 74  File: "/daemon/master.c" Object: /daemon/master Program: "/daemon/master.c"
+Line: 22  File: "/daemon/events.c" Object: /daemon/events Program: "/daemon/events.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c"
+Line: 4  File: "/sefun/objects.c" Object: /sefun/sefun Program: "/sefun/sefun.c""
+----------

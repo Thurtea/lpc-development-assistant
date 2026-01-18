@@ -1,0 +1,103 @@
+#!/usr/local/bin/perl
+
+$File = __FILE__;
+$Admin = $<;
+$HomeDir = $ENV{"HOME"};
+$CurrentDir = $ENV{"PWD"};
+$MudlibDir = "$HomeDir/Nightmare-3.3";
+
+print "Nightmare Mudlib 3.3.1 Install Process\n\n";
+print "You will be asked a series of questions.  Most will provide you\n";  
+print "with a default answer enclosed in [].  If the default is ok, then\n";
+print "simply hit return.  If you do not like the default, type in a new\n";
+print "answer.\n\n";
+
+print "What is the name of your mud?\n";
+print "[] ";
+
+$ans = <>;
+chop($ans);
+die "No mud name given, install aborted.\n" unless $ans;
+$MudName = $ans;
+
+print "What port number would you like to use?\n";
+print "[4000] ";
+
+$ans = <>;
+chop($ans);
+$ans = 4000 unless $ans;
+die "Illegal port number.\n" if $ans < 1025 || $ans > 32767;
+$Port = $ans;
+
+print "What is the port number of your address server?\n";
+print "[9999] ";
+
+$ans = <>;
+chop($ans);
+$ans = 9999 unless $ans;
+die "Illegal port number.\n" if $ans < 1025 || $ans > 32767;
+$AddrPort = $ans;
+
+print "Where is your config file directory as stated in options.h?\n";         
+print "[] ";                                                                   
+
+$ans = <>;                                                          
+chop($ans);
+die "Could not find config file directory $ans!\n" unless -d $ans;
+$ConfigFile = "$ans/Config.NM33";
+
+print "And in which directory is the driver binary going?\n";
+print "[] ";
+
+$ans = <>;
+chop($ans);
+die "Could not find binary directory $ans!\n" unless -d $ans;
+$BinDir = $ans;
+
+print "In which directory would you like to install your mudlib?\n";
+print "[$MudlibDir] ";
+
+$ans = <>;
+chop($ans);
+$ans = $MudlibDir unless $ans;
+die "Installation failing!  Directory already exists!\n" if -d $ans;
+die $! unless mkdir($ans, 770);
+$MudlibDir = $ans;
+
+die $! unless rename("./mudlib", $MudlibDir);
+
+open(SRC, "config.tmp/1");
+open(OUT, ">$ConfigFile");
+while(<SRC>) { print OUT; }
+close(SRC);
+print OUT "name : $MudName\n\n# port number on which to accept new users\n";
+print OUT "port number : $Port\n\n# max users (unused)\nmaximum users : 40\n\n";
+print OUT "# absolute path name of your mudlib directory\n";
+print OUT "mudlib directory : $MudlibDir\n\n";
+print OUT "# absolute path name of the binary directory where the driver is\n";
+print OUT "binary directory : $BinDir\n";
+
+open(SRC, "config.tmp/2");
+while(<SRC>) { print OUT; }
+close(SRC);
+
+print OUT "address server port : $AddrPort\n";
+open(SRC, "config.tmp/3");
+while(<SRC>) { print OUT; }
+close(SRC);
+close(OUT);
+
+open(OUT, ">$BinDir/RestartMUD");
+print OUT "#!/bin/csh\n\n";
+print OUT "$BinDir/addr_server $AddrPort &\n\n";
+print OUT "while(1)\n";
+print OUT "    $BinDir/driver $ConfigFile\n";
+print OUT "end\n";
+close(OUT);
+
+print "Install complete...  Starting $MudName...\n";
+
+if(fork()) { exit 1; }
+else { exec("$BinDir/RestartMUD"); }
+
+

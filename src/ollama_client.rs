@@ -113,85 +113,103 @@ impl OllamaClient {
         use tokio_stream::wrappers::ReceiverStream;
         use tokio_stream::StreamExt;
 
+        // Spawn a dedicated thread with its own Tokio runtime which performs the
+        // HTTP request and reads the response bytes stream incrementally. As each
+        // chunk arrives we forward it into the channel by awaiting `tx.send(...)`
+        // inside that runtime — this avoids blocking a runtime on other threads.
+
         let base_url = self.base_url.clone();
         let client = self.client.clone();
         let model = model.to_string();
         let prompt = prompt.to_string();
 
-        let (tx, rx) = mpsc::channel::<anyhow::Result<String>>(100);
+        let (tx, rx) = mpsc::channel::<anyhow::Result<String>>(128);
 
-        tokio::spawn(async move {
-            let request = OllamaGenerateRequest {
-                model: model.clone(),
-                prompt: prompt.clone(),
-                stream: true,
-                options: Some(OllamaOptions {
-                    temperature: 0.3,
-                    top_p: 0.9,
-                    top_k: 40,
-                    num_predict: 4096,
-                }),
-            };
-
-            let res = client
-                .post(format!("{}/api/generate", base_url))
-                .json(&request)
-                .send()
-                .await;
-
-            let mut response = match res {
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Runtime::new() {
                 Ok(r) => r,
                 Err(e) => {
-                    let _ = tx.send(Err(anyhow::Error::new(e))).await;
+                    let _ = tx.blocking_send(Err(anyhow::anyhow!(format!("Failed to create runtime: {}", e))));
                     return;
                 }
             };
 
-            if !response.status().is_success() {
-                let status = response.status();
-                let text = response.text().await.unwrap_or_default();
-                let _ = tx.send(Err(anyhow::anyhow!(format!("Ollama API error ({}): {}", status, text)))).await;
-                return;
-            }
+            let _ = rt.block_on(async move {
+                let request = OllamaGenerateRequest {
+                    model: model.clone(),
+                    prompt: prompt.clone(),
+                    stream: true,
+                    options: Some(OllamaOptions {
+                        temperature: 0.3,
+                        top_p: 0.9,
+                        top_k: 40,
+                        num_predict: 4096,
+                    }),
+                };
 
-            let mut stream = response.bytes_stream();
+                let res = client
+                    .post(format!("{}/api/generate", base_url))
+                    .json(&request)
+                    .send()
+                    .await;
 
-            while let Some(item) = stream.next().await {
-                match item {
-                    Ok(bytes) => {
-                        // Bytes may contain NDJSON or partial chunks; split on newlines
-                        if let Ok(s) = std::str::from_utf8(bytes.as_ref()) {
-                            for line in s.split('\n') {
-                                let line = line.trim();
-                                if line.is_empty() { continue; }
-                                // Try parsing JSON object per line
-                                if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
-                                    if let Some(resp) = val.get("response") {
-                                        if let Some(text) = resp.as_str() {
+                let mut response = match res {
+                    Ok(r) => r,
+                    Err(e) => {
+                        let _ = tx.send(Err(anyhow::anyhow!(e))).await;
+                        return;
+                    }
+                };
+
+                if !response.status().is_success() {
+                    let status = response.status();
+                    let text = response.text().await.unwrap_or_default();
+                    let _ = tx.send(Err(anyhow::anyhow!(format!("Ollama API error ({}): {}", status, text)))).await;
+                    return;
+                }
+
+                let mut stream = response.bytes_stream();
+
+                while let Some(item) = stream.next().await {
+                    match item {
+                        Ok(bytes) => {
+                            if let Ok(s) = std::str::from_utf8(bytes.as_ref()) {
+                                for line in s.split('\n') {
+                                    let line = line.trim();
+                                    if line.is_empty() { continue; }
+                                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
+                                        // Prefer `response` or `delta` text fields. Ignore
+                                        // control/meta messages (e.g., final JSON with
+                                        // `created_at`, `done`, etc.) to avoid showing
+                                        // raw metadata in the UI.
+                                        if let Some(resp) = val.get("response") {
+                                            if let Some(text) = resp.as_str() {
+                                                let _ = tx.send(Ok(text.to_string())).await;
+                                            }
+                                        } else if let Some(text) = val.get("delta").and_then(|d| d.as_str()) {
                                             let _ = tx.send(Ok(text.to_string())).await;
+                                        } else if val.get("done").is_some() || val.get("created_at").is_some() {
+                                            // skip metadata-only messages
+                                            continue;
+                                        } else {
+                                            let _ = tx.send(Ok(line.to_string())).await;
                                         }
-                                    } else if let Some(text) = val.get("delta").and_then(|d| d.as_str()) {
-                                        // Some streaming formats use delta
-                                        let _ = tx.send(Ok(text.to_string())).await;
                                     } else {
-                                        // fallback: send the raw line
                                         let _ = tx.send(Ok(line.to_string())).await;
                                     }
-                                } else {
-                                    // not JSON, forward raw chunk
-                                    let _ = tx.send(Ok(line.to_string())).await;
                                 }
                             }
                         }
-                    }
-                    Err(e) => {
-                        let _ = tx.send(Err(anyhow::Error::new(e))).await;
-                        break;
+                        Err(e) => {
+                            let _ = tx.send(Err(anyhow::anyhow!(e))).await;
+                            break;
+                        }
                     }
                 }
-            }
+            });
         });
 
         ReceiverStream::new(rx)
     }
+
 }

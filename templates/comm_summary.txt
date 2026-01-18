@@ -1,0 +1,39 @@
+Comm layer (telnet, buffering, select loop)
+
+Overview:
+- Manages listening sockets, per-user interactive_t, telnet negotiation, input parsing, and output buffering.
+- Main pieces: init_user_conn, make_selectmasks, process_io, new_user_handler, get_user_data, add_message, flush_message, remove_interactive.
+
+Key behaviors & snippets:
+
+/* build fd sets for select: external ports, user fds, addr_server, lpc_socks */
+INLINE void make_selectmasks() { /* sets readmask/writemask based on state */ }
+
+/* process I/O after select: accept, read user data, flush messages, socket efuns */
+INLINE void process_io() { /* iterates external ports, users, lpc_socks, addr_server */ }
+
+/* accept new user, initialize interactive_t, call master->connect to obtain user object */
+static void new_user_handler P1(int, which) { /* accept(), set nonblocking, allocate slot, call_MASTER_CONNECT */ }
+
+/* read data into interactive buffer and handle telnet: PORT_TELNET/PORT_MUD/PORT_ASCII */
+static void get_user_data P1(interactive_t *, ip) { /* OS_socket_read, copy_chars, restore_svalue or apply PROCESS_INPUT */ }
+
+/* write buffered output to socket; handles EWOULDBLOCK/EINTR and updates counters */
+int flush_message P1(interactive_t *, ip) { /* send(), manage message_consumer/producer, update inet stats */ }
+
+/* add a message to interactive buffer (handles CR/LF translation) */
+void add_message P3(object_t *, who, char *, data, int, len) { /* writes into circular message_buf and flushes as needed */ }
+
+/* remove interactive: close socket, notify master with NET_DEAD, free resources */
+void remove_interactive P2(object_t *, ob, int, dested) { /* flush, safe_apply(APPLY_NET_DEAD), close fd, free */ }
+
+Telnet handling:
+- copy_chars implements IAC processing, DO/WILL/WONT/DONT, SB handling (TTYPE, NAWS, LINEMODE), and SLC negotiation.
+- Negotiation uses add_binary_message to reply inline.
+
+Notes:
+- Uses CMD_IN_BUF and SINGLE_CHAR flags to decide when a command is ready.
+- Supports several PORT_* modes (TELNET, MUD, ASCII, BINARY).
+- Works with lpc socket efuns by including lpc_socks fds in select masks.
+
+Source: mud-references/mudos_v22.2b14-ds2/comm.c

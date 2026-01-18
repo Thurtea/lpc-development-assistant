@@ -1,0 +1,41 @@
+Backend loop & heartbeats (driver)
+
+Overview:
+- The main runtime loop is in backend(): builds select masks, calls select(), dispatches I/O, processes user commands, and triggers heartbeats.
+- Heartbeat handling is in call_heart_beat(); object swapping/cleanup in look_for_objects_to_swap().
+
+Key behaviors & snippets:
+
+/* main backend loop: select -> process_io -> process_user_command -> call_heart_beat */
+void backend() {
+    /* init, init_user_conn, clear_state, save_context */
+    while (1) {
+        current_interactive = 0;
+        eval_cost = max_cost;
+
+        if (obj_list_replace || obj_list_destruct)
+            remove_destructed_objects();
+
+        if (MudOS_is_being_shut_down)
+            shutdownMudOS(0);
+
+        make_selectmasks();
+        nb = select(..., &readmask, &writemask, ..., &timeout);
+        if (nb > 0) process_io();
+        for (i = 0; process_user_command() && i < max_users; i++);
+        if (heart_beat_flag) call_heart_beat();
+    }
+}
+
+/* call_heart_beat: iterates heart_beats array, does safe apply of heart_beat, call_out maintenance */
+static void call_heart_beat() { /* ualarm/sigalrm setup, save_context/longjmp protection, call_direct for heart_beat */ }
+
+/* object swap/cleanup: periodically invoked from call_heart_beat */
+static void look_for_objects_to_swap() { /* check time_to_swap/time_to_clean_up, call clean_up, swap() where appropriate */ }
+
+Notes:
+- backend() uses setjmp/longjmp (save_context/restore_context) to protect loop from errors.
+- Heartbeats are scheduled via SIGALRM/ualarm or Windows thread; flags used to force immediate iteration.
+- Object swapping respects O_HEART_BEAT and O_WILL_CLEAN_UP flags and preserves program state when swapping.
+
+Source: mud-references/mudos_v22.2b14-ds2/backend.c

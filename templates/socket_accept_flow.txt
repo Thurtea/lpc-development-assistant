@@ -1,0 +1,21 @@
+Socket accept flow
+
+Description:
+Accepts a new connection, sets non-blocking mode, allocates a driver-side socket slot and copies callbacks from the listening socket.
+
+Snippet:
+int socket_accept P3(int, fd, svalue_t *, read_callback, svalue_t *, write_callback) {
+    struct sockaddr_in addr;
+    socklen_t len = sizeof(addr);
+    int newfd = accept(fd, (struct sockaddr *)&addr, &len);
+    if (newfd < 0) return -1;
+    set_nonblocking(newfd);
+
+    /* allocate slot */
+    lpc_socks[newfd].fd = newfd;
+    lpc_socks[newfd].mode = MUD;
+    lpc_socks[newfd].read_callback = *read_callback;
+    lpc_socks[newfd].write_callback = *write_callback;
+
+    return newfd;
+}

@@ -1,0 +1,24 @@
+1) Uncompress the package so that the folders like bin and lib
+   are in c:\merentha
+2) Use wordpad to edit c:\merentha\bin\config.win32 and change the mudname
+3) Double-click on c:\merentha\win32\mud.bat
+4) telnet to localhost 6622
+5) You will now need to log the default admin in, make your new
+   character an admin, then with your new admin delete the default admin
+   (for security reasons).
+   This is how:
+   a) Log in with the character "admin" password "admin"
+   b) Once you are logged in, type "promote <char> <position>"
+      (your new character must still be logged in at this time)
+      If <position> is set to be player, they are a player.  If it
+      is set to anything else they are an administrator, so type
+      something like "promote petrarch admin"
+   c) Log out the "admin" character and log your new character back in.
+      Type "rid admin".  This will delete that default character.  You
+      must remove this admin character, otherwise it is a security risk.
+
+If you have trouble, post in the Merentha section of http://lpmuds.net/forum
+
+If you plan to use intermud channels, see the rules at: http://lpmuds.net/intermud.html
+
+Have fun!

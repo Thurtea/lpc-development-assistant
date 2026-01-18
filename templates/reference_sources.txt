@@ -1,0 +1,47 @@
+Reference Sources Guide
+
+This file summarizes the reference archives present in `mud-references/` and how they are useful when implementing drivers or mudlibs.
+
+Included archives (examples present in your `mud-references` folder):
+- dgd-master.zip: DGD driver sources and utilities. Useful for modern driver design and distributed features.
+- ds3.8.2.zip, dsI.zip, dsIIr10.zip: Variants of the Diku/Nirvana/DS family; contain legacy mudlib code and examples of LPC usage.
+- final_realms_fluffos_v1.zip, lima_fluffos_v1.zip, merentha_fluffos_v2.zip, nightmare4_fluffos_v1.zip: FluffOS-compiled mudlibs and driver patches with real-world efuns, object layouts, and utilities.
+- mudos_v22.2b14-ds2.tgz: MudOS family sources; good examples of VM and compiler internals.
+- nightmare-3.3.1.tar.gz, nightmare3_mudos_v1.tar.gz: Historical Nightmare and MudOS variants; contain extensive mudlib code and driver hacks.
+
+How to use:
+- Run "Extract Archives" in the app to unpack these into `mud-references/extracted/<archive>/` for searching.
+- Look for `*.c`, `*.h`, `*.lpc`, and `*.y` files when researching internals or examples.
+- Use the `search_examples` command to locate code that contains specific keywords (e.g., "lexer", "token", "parse").
+
+Notes:
+- Many archives contain a mixture of driver code and mudlib code; pay attention to top-level directories named `src`, `driver`, `mudlib`, or `lib`.
+- When copying code from references, adapt build and memory management patterns to your current driver design and C conventions.
+Reference Sources Guide
+
+This guide explains the available reference archives in mud-references/ and how to use them as context when developing drivers and mudlibs.
+
+Included archives (already downloaded):
+- dgd-master.zip
+- ds3.8.2.zip
+- dsI.zip
+- dsIIr10.zip
+- final_realms_fluffos_v1.zip
+- lima_fluffos_v1.zip
+- merentha_fluffos_v2.zip
+- mudos_v22.2b14-ds2.tgz
+- nightmare-3.3.1.tar.gz
+- nightmare3_mudos_v1.tar.gz
+- nightmare4_fluffos_v1.zip
+
+How to use:
+- Run "Extract Archives" from the UI to unpack these into mud-references/extracted/.
+- Use the search_examples feature to find code snippets by keyword across the extracted sources.
+- Prefer reading the driver and efun implementations from established projects (e.g., mudos, dgd) to learn idiomatic patterns.
+
+Mapping suggestions:
+- dgd-master, mudos: driver internals, VM and object management
+- ds* and nightmare*: mudlib structure, commands, and driver integration examples
+- fluffos variants: efun implementations and security considerations
+
+When asking for code, reference this guide to instruct the model which archives to consider; the app will include the templates and can include snippets from extracted code returned by search_examples.

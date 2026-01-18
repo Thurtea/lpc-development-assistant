@@ -1,0 +1,12 @@
+use lpc_dev_assistant::ContextManager;
+use std::path::PathBuf;
+
+fn main() -> anyhow::Result<()> {
+    let cwd = std::env::current_dir()?;
+    let root = if cwd.ends_with("lpc-dev-assistant") { cwd.parent().unwrap().to_path_buf() } else { cwd };
+    let cm = ContextManager::new(root);
+    cm.ensure_templates_exist()?;
+    let txt = cm.load_socket_api_context()?;
+    println!("Loaded template length: {}", txt.len());
+    Ok(())
+}
