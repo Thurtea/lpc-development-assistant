@@ -53,3 +53,11 @@ If you want, I can:
 - Implement the stream cancellation flow next and wire a Stop button into the UI.
 - Run a quick `cargo build` to list current warnings and fix the highest-priority ones.
 
+Repository commit and push
+- Commit: 65a5f4e0
+- Message: chore(ui): diagnostics toggle, response wrapping, extraction UI; add summary-01-18.md
+- Remote: origin (https://github.com/Thurtea/lpc-development-assistant.git)
+- Push status: Everything up-to-date (local branch `main` matches remote)
+
+Status: I committed and pushed the changes above. You're all set to continue later.
+
