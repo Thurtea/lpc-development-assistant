@@ -30,7 +30,7 @@ mod tauri_adapters {
         prompt.push_str("\n\nQUESTION:\n");
         prompt.push_str(&question);
 
-        let client = OllamaClient::new();
+        let client = OllamaClient::new().map_err(|e| e.to_string())?;
         client.generate(&model, &prompt).await.map_err(|e: anyhow::Error| e.to_string())
     }
 
@@ -85,13 +85,13 @@ async fn ask_ollama(model: String, question: String, context_type: Option<String
     eprintln!("DEBUG: Final prompt length: {} chars", prompt_len);
     eprintln!("DEBUG: First {} chars:\n{}", first_n, &prompt[..first_n]);
 
-    let client = OllamaClient::new();
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
     client.generate(&model, &prompt).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn list_models() -> Result<Vec<String>, String> {
-    let client = OllamaClient::new();
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
     // run in blocking context (reqwest is async but list_models is async) — use a small runtime
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     rt.block_on(async { client.list_models().await.map_err(|e| e.to_string()) })
@@ -100,7 +100,7 @@ fn list_models() -> Result<Vec<String>, String> {
 #[tauri::command]
 fn check_ollama_health() -> Result<serde_json::Value, String> {
     // Returns { ok: bool, models: [...] } on success, or Err(string) on failure
-    let client = OllamaClient::new();
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     match rt.block_on(async { client.list_models().await.map_err(|e| e.to_string()) }) {
         Ok(models) => Ok(serde_json::json!({"ok": true, "models": models})),
@@ -166,7 +166,7 @@ fn ask_ollama_stream(window: Window, model: String, question: String, context_ty
     eprintln!("DEBUG: Final prompt length: {} chars", prompt_len);
     eprintln!("DEBUG: First {} chars:\n{}", first_n, &prompt[..first_n]);
 
-    let client = OllamaClient::new();
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
     let mut stream = client.generate_stream(&model, &prompt);
 
     // spawn async task to forward tokens to the webview

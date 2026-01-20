@@ -7,7 +7,13 @@ async fn main() {
     let base = std::env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
     println!("OLLAMA HEALTH CHECK: probing {}", base);
 
-    let client = ollama_client::OllamaClient::new();
+    let client = match ollama_client::OllamaClient::new() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to create OllamaClient: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     match client.list_models().await {
         Ok(models) => {
