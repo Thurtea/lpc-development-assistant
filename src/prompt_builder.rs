@@ -112,11 +112,55 @@ impl PromptBuilder {
 
     pub fn trim_to_fit(&self, parts: Vec<&str>, max_tokens: usize) -> String {
         // Simple concatenation then naive trimming
-        let mut s = parts.join("\n\n");
-        let mut tokens = Self::estimate_tokens(&s);
+        let s = parts.join("\n\n");
+        let tokens = Self::estimate_tokens(&s);
         if tokens <= max_tokens { return s; }
-        let mut max_chars = max_tokens * 4;
+        let max_chars = max_tokens * 4;
         if max_chars == 0 { return String::new(); }
         s.chars().take(max_chars).collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_estimate_tokens() {
+        // 4 chars ≈ 1 token, so 16 chars should be ~5 tokens
+        let text = "This is a test string for token estimation.";
+        let tokens = PromptBuilder::estimate_tokens(text);
+        assert!(tokens > 0, "Token count should be positive");
+    }
+
+    #[test]
+    fn test_estimate_tokens_empty() {
+        let tokens = PromptBuilder::estimate_tokens("");
+        assert_eq!(tokens, 1, "Empty string should return at least 1 token");
+    }
+
+    #[test]
+    fn test_trim_to_fit_under_limit() {
+        let pb = PromptBuilder::new_empty(PathBuf::from("/tmp"));
+        let parts = vec!["hello", "world"];
+        let result = pb.trim_to_fit(parts, 100);
+        assert!(result.contains("hello"), "Result should contain 'hello'");
+        assert!(result.contains("world"), "Result should contain 'world'");
+    }
+
+    #[test]
+    fn test_trim_to_fit_over_limit() {
+        let pb = PromptBuilder::new_empty(PathBuf::from("/tmp"));
+        let long_text = "x".repeat(1000);
+        let parts = vec![long_text.as_str()];
+        let result = pb.trim_to_fit(parts, 10);
+        assert!(result.len() < 1000, "Result should be shorter than input");
+    }
+
+    #[test]
+    fn test_new_empty() {
+        let pb = PromptBuilder::new_empty(PathBuf::from("/tmp"));
+        assert!(pb.templates.is_empty(), "Empty constructor should have no templates");
+    }
+}
+
