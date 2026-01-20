@@ -1,6 +1,6 @@
 # lpc-development-assistant
 
-![build](https://img.shields.io/badge/build-not%20configured-lightgray) ![Rust](https://img.shields.io/badge/rust-1.70%2B-000000.svg) ![License](https://img.shields.io/badge/license-MIT-blue) 
+[![Rust CI](https://github.com/Thurtea/lpc-development-assistant/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/Thurtea/lpc-development-assistant/actions/workflows/rust-ci.yml) ![Rust](https://img.shields.io/badge/rust-1.70%2B-000000.svg) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 Lightweight tooling to help develop and analyze MUD drivers and mudlibs, with a Rust core that can query a local Ollama LLM and provide contextualized LPC guidance.
 
