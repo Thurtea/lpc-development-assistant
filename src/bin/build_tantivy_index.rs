@@ -7,7 +7,7 @@ use serde_json::Value;
 use tantivy::directory::MmapDirectory;
 use tantivy::schema::*;
 use tantivy::Index;
-use tantivy::doc::Document;
+use tantivy::{doc, Document};
 
 fn main() -> io::Result<()> {
     let cwd = env::current_dir()?;
@@ -29,7 +29,7 @@ fn main() -> io::Result<()> {
     let schema = schema_builder.build();
 
     let index_path = base.join("index_tantivy");
-    let dir = std::fs::create_dir_all(&index_path).map(|_| ())?;
+    let _dir = std::fs::create_dir_all(&index_path).map(|_| ())?;
     let mmap_dir = MmapDirectory::open(&index_path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
     let index = Index::open_or_create(mmap_dir, schema.clone()).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
@@ -44,7 +44,14 @@ fn main() -> io::Result<()> {
         if line.trim().is_empty() { continue; }
         match serde_json::from_str::<Value>(&line) {
             Ok(v) => {
-                let mut doc = Document::default();
+                // Use doc! macro to create document safely
+                let mut doc = doc!(
+                    id_field => "",
+                    path_field => "",
+                    chunk_field => 0i64,
+                    text_field => ""
+                );
+                
                 if let Some(id) = v.get("id").and_then(|x| x.as_str()) {
                     doc.add_text(id_field, id);
                 }
@@ -71,3 +78,4 @@ fn main() -> io::Result<()> {
     println!("Tantivy index built: {} documents indexed", count);
     Ok(())
 }
+

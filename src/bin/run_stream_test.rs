@@ -14,7 +14,13 @@ use tokio_stream::StreamExt;
 #[tokio::main]
 async fn main() {
     println!("RUN_STREAM_TEST: Starting headless streaming test");
-    let client = ollama_client::OllamaClient::new();
+    let client = match ollama_client::OllamaClient::new() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to create OllamaClient: {}", e);
+            return;
+        }
+    };
     let workspace_root = PathBuf::from("E:\\Work\\AMLP");
     let ctx = context_manager::ContextManager::new(workspace_root.clone());
 

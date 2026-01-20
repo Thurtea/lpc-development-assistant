@@ -182,7 +182,13 @@ impl LPCDevApp {
             return;
         }
 
-        let model = self.models[self.selected_model.unwrap()].name.clone();
+        let model = if let Some(idx) = self.selected_model {
+            self.models[idx].name.clone()
+        } else {
+            // This branch is already checked above, but be defensive
+            self.status_message = "⚠️ Model index invalid".to_string();
+            return;
+        };
         let question = self.question.clone();
         let context = self.load_context();
         let provider = self.provider.clone();

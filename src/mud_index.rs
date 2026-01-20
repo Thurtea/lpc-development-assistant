@@ -95,3 +95,58 @@ impl MudReferenceIndex {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_code_file_valid() {
+        assert!(MudReferenceIndex::is_code_file(Path::new("test.c")));
+        assert!(MudReferenceIndex::is_code_file(Path::new("test.h")));
+        assert!(MudReferenceIndex::is_code_file(Path::new("test.lpc")));
+        assert!(MudReferenceIndex::is_code_file(Path::new("test.y")));
+        assert!(MudReferenceIndex::is_code_file(Path::new("test.txt")));
+    }
+
+    #[test]
+    fn test_is_code_file_invalid() {
+        assert!(!MudReferenceIndex::is_code_file(Path::new("test.rs")));
+        assert!(!MudReferenceIndex::is_code_file(Path::new("test.json")));
+        assert!(!MudReferenceIndex::is_code_file(Path::new("test")));
+    }
+
+    #[test]
+    fn test_extract_snippet_with_match() {
+        let content = "This is a test string with some content";
+        let snippet = MudReferenceIndex::extract_snippet(content, "test", 50);
+        assert!(snippet.contains("test"), "Snippet should contain search term");
+    }
+
+    #[test]
+    fn test_extract_snippet_no_match() {
+        let content = "This is a test string";
+        let snippet = MudReferenceIndex::extract_snippet(content, "notfound", 50);
+        assert!(snippet.contains("test"), "Should return fallback snippet");
+    }
+
+    #[test]
+    fn test_extract_snippet_truncation() {
+        let content = "a".repeat(1000);
+        let snippet = MudReferenceIndex::extract_snippet(&content, "z", 100);
+        assert!(snippet.len() < 200, "Snippet should be truncated");
+    }
+
+    #[test]
+    fn test_new() {
+        let idx = MudReferenceIndex::new(PathBuf::from("/tmp"));
+        assert_eq!(idx.corpus_root, PathBuf::from("/tmp"));
+    }
+
+    #[test]
+    fn test_refresh() {
+        let idx = MudReferenceIndex::new(PathBuf::from("/tmp"));
+        assert!(idx.refresh().is_ok(), "Refresh should succeed");
+    }
+}
+

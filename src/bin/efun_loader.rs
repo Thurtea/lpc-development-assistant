@@ -43,3 +43,26 @@ pub fn lookup_efun(name: &str) -> Result<Option<(String,String)>, String> {
 
     Ok(None)
 }
+fn main() {
+    // Simple CLI interface for efun lookup
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: {} <efun_name>", args[0]);
+        std::process::exit(1);
+    }
+
+    let efun_name = &args[1];
+    match lookup_efun(efun_name) {
+        Ok(Some((name, docs))) => {
+            println!("Efun: {}\n{}", name, docs);
+        }
+        Ok(None) => {
+            eprintln!("Efun '{}' not found", efun_name);
+            std::process::exit(2);
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(3);
+        }
+    }
+}

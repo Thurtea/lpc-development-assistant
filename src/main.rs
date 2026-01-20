@@ -25,13 +25,13 @@ async fn ask_ollama(model: String, question: String, context_type: Option<String
     prompt.push_str("\n\nQUESTION:\n");
     prompt.push_str(&question);
 
-    let client = OllamaClient::new();
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
     client.generate(&model, &prompt).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn list_models() -> Result<Vec<String>, String> {
-    let client = OllamaClient::new();
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
     client.list_models().await.map_err(|e| e.to_string())
 }
 
@@ -129,7 +129,7 @@ fn ask_ollama_stream(window: tauri::Window, model: String, question: String, con
     prompt.push_str("\n\nQUESTION:\n");
     prompt.push_str(&question);
 
-    let client = OllamaClient::new();
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
     let stream = client.generate_stream(&model, &prompt);
     let win = window.clone();
 
