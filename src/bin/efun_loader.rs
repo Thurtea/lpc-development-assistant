@@ -9,7 +9,12 @@ pub fn lookup_efun(name: &str) -> Result<Option<(String,String)>, String> {
                 if let Some(v) = map.get(name) {
                     // if it's a string, treat as docs
                     if v.is_string() {
-                        return Ok(Some((name.to_string(), v.as_str().unwrap().to_string())));
+                        if let Some(s) = v.as_str() {
+                            return Ok(Some((name.to_string(), s.to_string())));
+                        } else {
+                            // unexpected: treat value's stringified form as docs
+                            return Ok(Some((name.to_string(), v.to_string())));
+                        }
                     }
                     if let Some(sig) = v.get("signature") {
                         let sigs = sig.as_str().unwrap_or("").to_string();

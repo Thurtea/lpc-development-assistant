@@ -1,4 +1,5 @@
-use iced::{executor, Application, Command, Element, Settings, Theme, Length};
+use iced::{executor, Application, Command, Element, Settings, Theme, Length, Color};
+use iced::theme;
 use iced::widget::{column, row, Text, TextInput, Button, Scrollable, PickList, Container};
 
 use chrono::Utc;
@@ -7,7 +8,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::process::Command as SysCommand;
 use std::fmt;
-use serde_json::Value;
+// use serde_json::Value;
 use std::sync::Arc;
 
 // syntect for syntax highlighting
@@ -15,7 +16,7 @@ use syntect::parsing::SyntaxSet;
 use syntect::highlighting::ThemeSet;
 use syntect::easy::HighlightLines;
 use syntect::util::LinesWithEndings;
-use syntect::highlighting::Style;
+// use syntect::highlighting::Color as SyntectColor;
 
 mod efun_loader;
 use efun_loader::lookup_efun;
@@ -68,6 +69,7 @@ enum Message {
     OpenEfun(String),
     SearchEfun(String),
     EfunDetails(Result<Option<(String, String)>, String>),
+    EfunFilterChanged(String),
 }
 
 struct LPCGui {
@@ -96,6 +98,7 @@ struct LPCGui {
     syntax_set: Arc<SyntaxSet>,
     theme_set: Arc<ThemeSet>,
     theme_name: String,
+    efun_filter: String,
 }
 
 impl Default for LPCGui {
@@ -117,6 +120,7 @@ impl Default for LPCGui {
             syntax_set: Arc::new(SyntaxSet::load_defaults_newlines()),
             theme_set: Arc::new(ThemeSet::load_defaults()),
             theme_name: ThemeSet::load_defaults().themes.keys().next().cloned().unwrap_or_else(|| "InspiredGitHub".to_string()),
+            efun_filter: String::new(),
         }
     }
 }
@@ -278,8 +282,14 @@ impl Application for LPCGui {
             }
 
             Message::OpenEfun(file_path) => {
-                // Try opening with notepad (Windows); ignore errors.
-                let _ = SysCommand::new("notepad").arg(&file_path).spawn();
+                // Try opening in VS Code first; fall back to notepad.
+                if SysCommand::new("code").arg(&file_path).spawn().is_err() {
+                    let _ = SysCommand::new("notepad").arg(&file_path).spawn();
+                }
+            }
+
+            Message::EfunFilterChanged(s) => {
+                self.efun_filter = s;
             }
 
         }
@@ -466,43 +476,60 @@ impl Application for LPCGui {
         ]
         .spacing(10);
 
-        let efuns_content = if !self.efuns.is_empty() {
-            let mut s = String::new();
+        let efuns_view: Element<Message> = if self.analysis_loading {
+            Container::new(Text::new("Analyzing driver...").size(12)).padding(10).into()
+        } else if !self.efuns.is_empty() {
+            // Filter input
+            let filter_input = TextInput::new("Filter efuns (e.g., socket, inventory)", &self.efun_filter)
+                .on_input(Message::EfunFilterChanged)
+                .padding(8)
+                .width(Length::Fill);
+
+            // Build clickable efun list with filter applied
+            let mut col = column![filter_input].spacing(6);
+            let filt = self.efun_filter.to_lowercase();
             for (i, (name, path)) in self.efuns.iter().enumerate() {
-                s.push_str(&format!("{}. {} -> {}\n", i + 1, name, path));
+                if !filt.is_empty() {
+                    let n = name.to_lowercase();
+                    let p = path.to_lowercase();
+                    if !n.contains(&filt) && !p.contains(&filt) { continue; }
+                }
+                let label = format!("{}. {} -> {}", i + 1, name, path);
+                col = col.push(Button::new(Text::new(label).size(12)).on_press(Message::OpenEfun(path.clone())).padding([4, 8]));
             }
-            s
-        } else if self.analysis_loading {
-            "Analyzing driver...".to_string()
+            Scrollable::new(col).height(Length::Fixed(200.0)).into()
         } else {
-            "No analysis results yet. Provide a path and click Analyze Driver.".to_string()
+            Container::new(Text::new("No analysis results yet. Provide a path and click Analyze Driver.").size(12)).padding(10).into()
         };
 
-        let efuns_view: Element<Message> = if !self.efuns.is_empty() || self.analysis_loading {
-            render_highlighted_element(efuns_content.clone(), self.syntax_set.clone(), self.theme_set.clone(), &self.theme_name)
-        } else {
-            Container::new(Text::new(efuns_content).size(12)).padding(10).into()
-        };
-        let efuns_view = Scrollable::new(efuns_view)
-            .height(Length::Fixed(160.0));
-
-        // Main layout
-        let content = column![
-            title,
-            controls,
+        // Split layout: left (input + analysis) | right (response + efun details)
+        let left_panel = column![
             subtitle,
             status_text,
+            Text::new("📝 Query:").size(16),
             prompt_input,
-            Text::new("📝 Response:").size(16),
-            row![response_view, efun_details_view],
-            // Show efuns reference list when Efuns tab selected
-            if self.context == Context::Efuns { Text::new("🔧 Efuns Reference:").size(16) } else { Text::new("").size(0) },
-            efuns_list_view,
-            Text::new("📚 References:").size(16),
-            refs_view,
             Text::new("🔧 Driver Analysis:").size(16),
             driver_input,
             efuns_view,
+            Text::new("📚 References:").size(16),
+            refs_view,
+            if self.context == Context::Efuns { Text::new("🔧 Efuns Reference:").size(16) } else { Text::new("").size(0) },
+            efuns_list_view,
+        ]
+        .spacing(10)
+        .width(Length::FillPortion(1));
+
+        let right_panel = column![
+            Text::new("💬 Response:").size(16),
+            row![response_view, efun_details_view],
+        ]
+        .spacing(10)
+        .width(Length::FillPortion(1));
+
+        let content = column![
+            title,
+            controls,
+            row![left_panel, right_panel].spacing(12),
         ]
         .spacing(10)
         .padding(20);
@@ -672,17 +699,29 @@ async fn call_ollama_cli(model: &str, prompt: &str) -> Result<String, String> {
 
 
 fn render_highlighted_element(code: String, ss: Arc<SyntaxSet>, ts: Arc<ThemeSet>, theme_name: &str) -> Element<'static, Message> {
-    // Find a suitable syntax (prefer C, fall back to plain text)
+    // Prefer C syntax; fall back to plain text
     let syntax = ss.find_syntax_by_extension("c").unwrap_or_else(|| ss.find_syntax_plain_text());
-    let mut h = HighlightLines::new(syntax, &ts.themes[theme_name]);
+    let theme = &ts.themes[theme_name];
+    let mut h = HighlightLines::new(syntax, theme);
 
     let mut col = column![];
     for line in LinesWithEndings::from(&code) {
         let ranges = h.highlight_line(line, ss.as_ref()).unwrap_or_default();
         let mut row_w = row![];
-        for (_style, text) in ranges {
-            // Use owned string to avoid tying returned widgets' lifetimes to the input slice
-            row_w = row_w.push(Text::new(text.to_string()).size(13));
+
+        for (style, text_str) in ranges {
+            // Map syntect color to iced Color
+            let fg = style.foreground;
+            let color = Color::from_rgb(
+                fg.r as f32 / 255.0,
+                fg.g as f32 / 255.0,
+                fg.b as f32 / 255.0,
+            );
+
+            let text_widget = Text::new(text_str.to_string())
+                .size(12)
+                .style(theme::Text::Color(color));
+            row_w = row_w.push(text_widget);
         }
         col = col.push(row_w);
     }
