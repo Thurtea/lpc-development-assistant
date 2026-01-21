@@ -33,10 +33,34 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "templates/*",
+      "mud-references/index.jsonl",
+      "mud-references/*.txt"
+    ],
+    "externalBin": [],
+    "copyright": "Copyright 2026",
+    "category": "DeveloperTool",
+    "shortDescription": "LPC MUD Development Assistant",
+    "longDescription": "An AI-powered assistant for LPC MUD driver and mudlib development with RAG-based code search and Ollama integration.",
     "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "en-US"
+      },
       "webviewInstallMode": {
         "type": "embedBootstrapper"
-      }
+      },
+      "allowDowngrades": true
     }
   }
 }

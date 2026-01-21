@@ -130,7 +130,8 @@ fn ask_ollama_stream(window: tauri::Window, model: String, question: String, con
     prompt.push_str(&question);
 
     let client = OllamaClient::new().map_err(|e| e.to_string())?;
-    let stream = client.generate_stream(&model, &prompt);
+    let cancel_flag = Arc::new(AtomicBool::new(false));
+    let stream = client.generate_stream_with_cancel(&model, &prompt, None, cancel_flag);
     let win = window.clone();
 
     tauri::async_runtime::spawn(async move {

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::fs::File;
 use std::io::Write;
+use std::sync::Arc;
 
 mod ollama_client {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/ollama_client.rs"));
@@ -40,7 +41,8 @@ async fn main() {
     };
 
     println!("Using model: qwen2.5-coder:7b");
-    let mut stream = client.generate_stream("qwen2.5-coder:7b", &full_prompt);
+    let cancel_flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let mut stream = client.generate_stream_with_cancel("qwen2.5-coder:7b", &full_prompt, None, cancel_flag);
 
     use std::time::Instant;
     let start = Instant::now();

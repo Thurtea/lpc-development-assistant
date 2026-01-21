@@ -62,7 +62,7 @@ required-features = ["iced-gui"]
 tauri-build = { version = "2.1", features = [] }
 
 [features]
-default = []
+default = ["with_tauri"]
 with_tauri = ["tauri"]
 custom-protocol = ["tauri/custom-protocol"]
 iced-gui = ["iced"]

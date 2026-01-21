@@ -9,6 +9,9 @@ dist/
 # Generated
 lpc-dev-assistant/gen/
 lpc-dev-assistant/target/
+gen/
+.index/
+.vite/
 
 # Data (repos only source, not extracted)
 mud-references/extracted/
@@ -19,3 +22,34 @@ mud-references/*.tar.gz
 # Logs/Temp
 *.log
 .DS_Store
+.setup_complete
+
+# Documentation (keep only essential)
+PHASE*.md
+PROJECT_STATUS_REPORT.md
+project-report-*.md
+summary-*.md
+WORK_COMPLETION_SUMMARY.md
+PHASE*_IMPLEMENTATION_COMPLETE.md
+PHASE*_SESSION_CHANGES_LOG.md
+ICED_GUI_STATUS.md
+VISUAL_REFERENCE_GUIDE.md
+RAG_CODE_REFERENCE.md
+RAG_QUICK_REFERENCE.md
+audit-results/
+docs/audits/
+
+# Old/Backup
+icons/old_icons/
+heart_beat_*.c
+gui.py
+app-icon.png
+*.exe.old
+*.msi.old
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use anyhow::{Result, Context};
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
 #[derive(Debug, Serialize)]
 pub struct OllamaGenerateRequest {
@@ -10,12 +11,28 @@ pub struct OllamaGenerateRequest {
     options: Option<OllamaOptions>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct OllamaOptions {
-    temperature: f32,
-    top_p: f32,
-    top_k: i32,
-    num_predict: i32,
+    pub temperature: f32,
+    pub top_p: f32,
+    pub top_k: i32,
+    pub num_predict: i32,
+}
+
+impl OllamaOptions {
+    pub fn with_defaults(
+        temperature: Option<f32>,
+        top_p: Option<f32>,
+        top_k: Option<i32>,
+        num_predict: Option<i32>,
+    ) -> Self {
+        OllamaOptions {
+            temperature: temperature.unwrap_or(0.3),
+            top_p: top_p.unwrap_or(0.9),
+            top_k: top_k.unwrap_or(40),
+            num_predict: num_predict.unwrap_or(4096),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,17 +76,12 @@ impl OllamaClient {
         })
     }
 
-    pub async fn generate(&self, model: &str, prompt: &str) -> Result<String> {
+    pub async fn generate(&self, model: &str, prompt: &str, options: Option<OllamaOptions>) -> Result<String> {
         let request = OllamaGenerateRequest {
             model: model.to_string(),
             prompt: prompt.to_string(),
             stream: false,
-            options: Some(OllamaOptions {
-                temperature: 0.3,
-                top_p: 0.9,
-                top_k: 40,
-                num_predict: 4096,
-            }),
+            options: Some(options.unwrap_or_else(|| OllamaOptions::with_defaults(None, None, None, None))),
         };
 
         let response = self.client
@@ -110,7 +122,13 @@ impl OllamaClient {
 
     /// Stream generation results from Ollama as they arrive.
     /// Returns a ReceiverStream of anyhow::Result<String> where each Ok(String) is a token/chunk.
-    pub fn generate_stream(&self, model: &str, prompt: &str) -> tokio_stream::wrappers::ReceiverStream<anyhow::Result<String>> {
+    pub fn generate_stream_with_cancel(
+        &self,
+        model: &str,
+        prompt: &str,
+        options: Option<OllamaOptions>,
+        cancel_flag: Arc<AtomicBool>,
+    ) -> tokio_stream::wrappers::ReceiverStream<anyhow::Result<String>> {
         use tokio::sync::mpsc;
         use tokio_stream::wrappers::ReceiverStream;
         use tokio_stream::StreamExt;
@@ -124,6 +142,7 @@ impl OllamaClient {
         let client = self.client.clone();
         let model = model.to_string();
         let prompt = prompt.to_string();
+        let opts = options.unwrap_or_else(|| OllamaOptions::with_defaults(None, None, None, None));
 
         let (tx, rx) = mpsc::channel::<anyhow::Result<String>>(128);
 
@@ -141,12 +160,7 @@ impl OllamaClient {
                     model: model.clone(),
                     prompt: prompt.clone(),
                     stream: true,
-                    options: Some(OllamaOptions {
-                        temperature: 0.3,
-                        top_p: 0.9,
-                        top_k: 40,
-                        num_predict: 4096,
-                    }),
+                    options: Some(opts.clone()),
                 };
 
                 let res = client
@@ -173,6 +187,11 @@ impl OllamaClient {
                 let mut stream = response.bytes_stream();
 
                 while let Some(item) = stream.next().await {
+                    if cancel_flag.load(Ordering::SeqCst) {
+                        let _ = tx.send(Ok("[Generation stopped]".to_string())).await;
+                        break;
+                    }
+
                     match item {
                         Ok(bytes) => {
                             if let Ok(s) = std::str::from_utf8(bytes.as_ref()) {
@@ -253,12 +272,7 @@ mod tests {
             model: "test-model".to_string(),
             prompt: "test prompt".to_string(),
             stream: false,
-            options: Some(OllamaOptions {
-                temperature: 0.5,
-                top_p: 0.9,
-                top_k: 40,
-                num_predict: 4096,
-            }),
+            options: Some(OllamaOptions::with_defaults(Some(0.5), Some(0.9), Some(40), Some(1024))),
         };
         let json = serde_json::to_string(&req);
         assert!(json.is_ok(), "Request should serialize to JSON");

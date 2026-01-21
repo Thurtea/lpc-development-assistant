@@ -65,7 +65,7 @@ async fn main() {
         question.to_string()
     };
 
-    match client.generate("qwen2.5-coder:7b", &full_prompt).await {
+    match client.generate("qwen2.5-coder:7b", &full_prompt, None).await {
         Ok(resp) => {
             let snippet: String = resp.chars().take(2000).collect();
             println!("Received response (len={}):\n{}", resp.len(), snippet);

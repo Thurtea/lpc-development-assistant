@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use crate::mud_index::MudReferenceIndex;
 
 pub struct PromptBuilder {
     templates_dir: PathBuf,
     templates: HashMap<String, String>,
+    reference_index: Option<MudReferenceIndex>,
 }
 
 impl PromptBuilder {
@@ -12,6 +14,7 @@ impl PromptBuilder {
         let mut pb = PromptBuilder {
             templates_dir: templates_dir.clone(),
             templates: HashMap::new(),
+            reference_index: None,
         };
 
         // Attempt to load known templates; missing files become empty strings
@@ -36,7 +39,13 @@ impl PromptBuilder {
         PromptBuilder {
             templates_dir,
             templates: HashMap::new(),
+            reference_index: None,
         }
+    }
+
+    pub fn with_reference_index(mut self, index: MudReferenceIndex) -> Self {
+        self.reference_index = Some(index);
+        self
     }
 
     pub fn build_prompt(&self, user_query: &str, _model: &str, examples: Vec<String>) -> Result<String, String> {
@@ -52,6 +61,21 @@ impl PromptBuilder {
 
         out.push_str(driver);
         out.push_str("\n\n");
+
+        // Search for relevant documentation
+        if let Some(ref index) = self.reference_index {
+            if let Ok(search_results) = index.search_with_scoring(user_query, 3) {
+                if !search_results.is_empty() {
+                    out.push_str("Relevant documentation:\n\n");
+                    for result in search_results {
+                        out.push_str(&format!("From: {}\n", result.path.display()));
+                        out.push_str(&format!("Relevance: {:.1}%\n", result.relevance_score * 100.0));
+                        out.push_str(&result.snippet);
+                        out.push_str("\n\n");
+                    }
+                }
+            }
+        }
 
         // Examples placeholder
         if !examples.is_empty() {
@@ -81,22 +105,33 @@ impl PromptBuilder {
         let mut final_text = out.clone();
         let mut tokens = Self::estimate_tokens(&final_text);
         if tokens > max_tokens {
-            // Order of trimming: examples first (we already embedded them), then efuns/mudlib/ref templates
-            // For simplicity, reduce the examples block (if any) by truncating the middle
+            // Order of trimming: examples first, then supporting templates, keep driver + references + query
             let mut reduced = String::new();
-            // keep header + driver + user query then trim supporting templates
             reduced.push_str("You are an LPC MUD development assistant.\n\n");
             reduced.push_str(driver);
             reduced.push_str("\n\n");
+            
+            // Include top reference if available
+            if let Some(ref index) = self.reference_index {
+                if let Ok(search_results) = index.search_with_scoring(user_query, 1) {
+                    if !search_results.is_empty() {
+                        let result = &search_results[0];
+                        reduced.push_str("Top reference:\n");
+                        reduced.push_str(&result.snippet);
+                        reduced.push_str("\n\n");
+                    }
+                }
+            }
+            
             reduced.push_str("User Query: ");
             reduced.push_str(user_query);
             reduced.push_str("\n\nProvide LPC code following the patterns shown above.");
 
             // If still too large, truncate final_text to char limit
-            let mut final_chars = (max_tokens * 4) as usize; // rough char budget
+            let mut final_chars = (max_tokens * 4) as usize;
             if final_chars > reduced.len() { final_chars = reduced.len(); }
             final_text = reduced.chars().take(final_chars).collect();
-            // ensure user query remains intact: if truncated removed part of user query, re-append full query
+            // ensure user query remains intact
             if !final_text.contains(user_query) {
                 final_text.push_str("\n\nUser Query: ");
                 final_text.push_str(user_query);

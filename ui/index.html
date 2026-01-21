@@ -4,181 +4,639 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LPC MUD Development Assistant</title>
-  <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <style>
-    :root{--bg:#1e1e1e;--fg:#d4d4d4;--accent:#569cd6;--muted:#6a6a6a}
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:Segoe UI, Roboto, Arial}
-    .container{max-width:1100px;margin:24px auto;padding:20px;border-radius:8px}
-    .header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-    .select,textarea,button{background:#2a2a2a;color:var(--fg);border:1px solid #333;padding:8px;border-radius:6px}
-    .row{display:flex;gap:12px;align-items:center}
-    textarea{width:100%;height:220px;resize:vertical;padding:12px;font-family:Consolas,monospace}
-    /* allow long tokens or long lines to wrap so the response remains readable */
-    #response{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;background:#151515;padding:12px;border-radius:6px;border:1px solid #222;min-height:200px;margin-top:12px}
-    .button-accent{background:var(--accent);color:#fff;border:none}
-    .small{font-size:12px;color:var(--muted)}
-    .toast { position: fixed; right: 16px; top: 16px; padding: 10px 14px; border-radius: 6px; color: #fff; display: none }
-    .toast.success { background: #2e7d32 }
-    .toast.error { background: #c62828 }
-    /* diagnostics toggle (displayed in header) */
-    .diag-toggle{position:relative;margin-left:12px;z-index:10001;background:rgba(0,0,0,0.6);color:#fff;border:1px solid #333;padding:6px 8px;border-radius:6px;font-size:12px;cursor:pointer}
-    #diagnostics.hidden{display:none}
-    pre.code{overflow:auto}
+    :root {
+      --bg: #0f141a;
+      --panel: #161d26;
+      --panel-2: #1d2633;
+      --text: #e8edf4;
+      --muted: #98a7b8;
+      --accent: #0ea5e9;
+      --accent-2: #06b6d4;
+      --border: #223140;
+      --shadow: 0 12px 40px rgba(0,0,0,0.4);
+      --success: #34d399;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --code: #0b1016;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(14,165,233,0.05), transparent 25%),
+                  radial-gradient(circle at 80% 10%, rgba(6,182,212,0.05), transparent 22%),
+                  var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "SF Pro Display", "Inter", sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(15,20,26,0.95);
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .select, .input, textarea {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      resize: vertical;
+      font-family: "JetBrains Mono", "Consolas", monospace;
+      background: var(--panel-2);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 18px;
+      padding: 18px 24px 32px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .subgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    label span {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    button.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: none; color: #0b1016; }
+    button:hover { transform: translateY(-1px); border-color: var(--accent); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .response {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 260px;
+      overflow-y: auto;
+    }
+
+    .markdown-body {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .markdown-body pre { background: var(--code); padding: 12px; border-radius: 10px; overflow-x: auto; }
+    .markdown-body code { background: rgba(255,255,255,0.04); padding: 2px 4px; border-radius: 6px; }
+
+    .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; color: var(--muted); font-size: 12px; }
+
+    .source-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .source-item { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); }
+    .source-score { color: var(--accent); font-weight: 700; font-size: 12px; }
+
+    .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 0 4px rgba(251,191,36,0.12); }
+    .dot.ok { background: var(--success); box-shadow: 0 0 0 4px rgba(52,211,153,0.12); }
+    .dot.err { background: var(--error); box-shadow: 0 0 0 4px rgba(248,113,113,0.12); }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; }
+    .tag { font-size: 12px; color: var(--muted); }
+
+    .copy-btn {
+      float: right;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: var(--text);
+      box-shadow: var(--shadow);
+      display: none;
+    }
+
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr; }
+    }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script>
 </head>
 <body>
-  <script>
-    // Tauri API should be injected automatically by the framework
-    // If it's not available, the app was opened directly (not via Tauri)
-    if (!window.__TAURI__) {
-      const el = document.createElement('div');
-      el.style.cssText = 'position:fixed;left:0;right:0;top:0;background:#b71c1c;color:#fff;padding:10px;text-align:center;z-index:9999;font-weight:bold';
-      el.textContent = '⚠️ Tauri API not injected. Ensure the app runs via cargo tauri dev.';
-      document.addEventListener('DOMContentLoaded', ()=>{ document.body.prepend(el); });
-    }
-  </script>
-
-  <div class="container">
-    <div class="header">
-      <h2 style="margin:0">LPC MUD Development Assistant</h2>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-        <div class="small">Backend: <span id="backend-status">Checking...</span></div>
-        <button id="diag-toggle" class="diag-toggle" title="Toggle diagnostics">Diag</button>
-      </div>
-    </div>
-
-    <label class="small">Ask a question (uses project references)</label>
-    <textarea id="question" placeholder="Ask about driver implementation, efuns, or paste a code snippet to search references"></textarea>
-
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button id="ask-btn" class="button-accent">Ask</button>
-      <button id="clear-btn" class="select">Clear</button>
-      <div style="flex:1" class="small">Simple: type, press Ask, view answer and sources below.</div>
-    </div>
-
-    <div id="response" aria-live="polite">Response will appear here</div>
-    <div id="sources" class="small" style="margin-top:12px">Sources: none</div>
-    <div class="footer" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+  <header>
+    <div class="title">
       <div>
-        <button id="copy-btn" class="select">Copy Answer</button>
+        <div>LPC Dev Assistant</div>
+        <div class="tag">Markdown rendering, model controls, RAG preview</div>
       </div>
-      <div id="status-msg" class="small">Ready</div>
+    </div>
+    <div class="controls">
+      <div class="status" id="conn-status"><span class="dot"></span><span id="status-text">Connecting…</span></div>
+      <select id="model-select" class="select"></select>
+      <button id="refresh-models">Refresh Models</button>
+      <button id="theme-toggle">Toggle Theme</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <div class="section-title">
+        <span>Prompt</span>
+        <div class="toolbar">
+          <span class="tag">Ctrl+Enter to send</span>
+        </div>
+      </div>
+      <textarea id="question" placeholder="Ask about driver, efuns, mudlib patterns, or paste code for guidance."></textarea>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="primary" id="ask-btn">Ask</button>
+        <button id="stop-btn">Stop</button>
+        <button id="clear-btn">Clear</button>
+      </div>
+
+      <div class="section-title" style="margin-top:18px;">Generation Settings</div>
+      <div class="subgrid">
+        <div class="control">
+          <label><span>Temperature</span> <small id="temp-val">0.3</small></label>
+          <div class="slider-row">
+            <input type="range" id="temperature" min="0" max="1" step="0.05" value="0.3">
+          </div>
+        </div>
+        <div class="control">
+          <label><span>Top P</span> <small id="top-p-val">0.9</small></label>
+          <input type="range" id="top-p" min="0" max="1" step="0.05" value="0.9">
+        </div>
+        <div class="control">
+          <label><span>Top K</span> <small id="top-k-val">40</small></label>
+          <input type="range" id="top-k" min="1" max="200" step="1" value="40">
+        </div>
+        <div class="control">
+          <label><span>Max Tokens</span> <small id="num-predict-val">4096</small></label>
+          <input type="range" id="num-predict" min="256" max="8192" step="256" value="4096">
+        </div>
+      </div>
+
+      <div class="control" style="margin-top:10px;">
+        <label><span>System Prompt</span></label>
+        <textarea id="system-prompt" placeholder="Optional: override or prepend behavior instructions."></textarea>
+      </div>
+
+      <div class="btn-row" style="margin-top:10px;">
+        <label class="control" style="flex-direction:row; align-items:center; gap:8px;">
+          <input type="checkbox" id="rag-toggle" checked />
+          <span>Use reference retrieval (RAG)</span>
+        </label>
+      </div>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <div class="card">
+      <div class="section-title">
+        <span>Response</span>
+        <div class="btn-row">
+          <button id="copy-response">Copy</button>
+        </div>
+      </div>
+      <div class="chip-row" id="meta-row">
+        <span class="chip" id="meta-model">Model: -</span>
+        <span class="chip" id="meta-latency">Latency: -</span>
+      </div>
+      <div class="response">
+        <div id="response-markdown" class="markdown-body">Waiting for a prompt.</div>
+      </div>
+
+      <div class="section-title" style="margin-top:14px;">Context Used</div>
+      <ul class="source-list" id="context-list">
+        <li class="source-item">No references yet.</li>
+      </ul>
+
+      <div class="section-title" style="margin-top:14px;">Status</div>
+      <div id="status-bar" class="status">Ready.</div>
+    </div>
   </div>
 
-    <!-- Runtime diagnostics (helps detect whether app is running inside Tauri webview) -->
-    <div id="diagnostics" class="hidden" style="position:fixed;right:12px;top:48px;background:rgba(0,0,0,0.6);color:#fff;padding:8px;border-radius:6px;font-size:12px;z-index:10000;max-width:320px;line-height:1.2">
-      <div><strong>Runtime diagnostics</strong></div>
-      <div id="diag-origin">origin: </div>
-      <div id="diag-ua">ua: </div>
-      <div id="diag-tauri">__TAURI__: </div>
-    </div>
+  <div id="toast" class="toast"></div>
 
   <script>
-  function safeStorage(){
-    try{ localStorage.setItem('__ok__','1'); localStorage.removeItem('__ok__'); return localStorage;}catch(e){try{sessionStorage.setItem('__ok__','1');sessionStorage.removeItem('__ok__');return sessionStorage}catch(e){return null}}
-  }
+    const store = (() => {
+      try { return window.localStorage; } catch { return null; }
+    })();
 
-  function showToast(text, kind='success'){ const t=document.getElementById('toast'); if(!t) return; t.textContent=text; t.className='toast '+kind; t.style.display='block'; setTimeout(()=>t.style.display='none',4000); }
+    const state = {
+      currentModel: '',
+      loading: false,
+      cancelToken: 0,
+    };
 
-  document.addEventListener('DOMContentLoaded', function initUI(){
-    (async function(){
-      // wait briefly for Tauri to inject its API (avoid race where DOMContentLoaded fires too early)
-      const waitForTauri = async (timeout = 2000, interval = 100) => {
-        const start = Date.now();
-        while (Date.now() - start < timeout) {
-          if (window.__TAURI__) return true;
-          await new Promise(r => setTimeout(r, interval));
+    const settingsDefaults = {
+      temperature: 0.3,
+      top_p: 0.9,
+      top_k: 40,
+      num_predict: 4096,
+      rag: true,
+      system_prompt: ''
+    };
+
+    function persistSettings() {
+      if (!store) return;
+      const payload = {
+        temperature: parseFloat(document.getElementById('temperature').value),
+        top_p: parseFloat(document.getElementById('top-p').value),
+        top_k: parseInt(document.getElementById('top-k').value, 10),
+        num_predict: parseInt(document.getElementById('num-predict').value, 10),
+        rag: document.getElementById('rag-toggle').checked,
+        system_prompt: document.getElementById('system-prompt').value || ''
+      };
+      store.setItem('lpc-settings', JSON.stringify(payload));
+    }
+
+    function loadSettings() {
+      const raw = store?.getItem('lpc-settings');
+      const data = raw ? { ...settingsDefaults, ...JSON.parse(raw) } : settingsDefaults;
+      document.getElementById('temperature').value = data.temperature;
+      document.getElementById('top-p').value = data.top_p;
+      document.getElementById('top-k').value = data.top_k;
+      document.getElementById('num-predict').value = data.num_predict;
+      document.getElementById('rag-toggle').checked = data.rag;
+      document.getElementById('system-prompt').value = data.system_prompt;
+      updateSliderLabels();
+    }
+
+    function updateSliderLabels() {
+      document.getElementById('temp-val').textContent = document.getElementById('temperature').value;
+      document.getElementById('top-p-val').textContent = document.getElementById('top-p').value;
+      document.getElementById('top-k-val').textContent = document.getElementById('top-k').value;
+      document.getElementById('num-predict-val').textContent = document.getElementById('num-predict').value;
+    }
+
+    function setStatus(text, kind = 'info') {
+      const el = document.getElementById('status-bar');
+      const status = document.getElementById('status-text');
+      const dot = document.querySelector('.status .dot');
+      if (el) el.textContent = text;
+      if (status) status.textContent = text;
+      if (dot) {
+        dot.classList.remove('ok', 'err');
+        if (kind === 'success') dot.classList.add('ok');
+        if (kind === 'error') dot.classList.add('err');
+      }
+    }
+
+    function toast(text) {
+      const el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = text;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 3200);
+    }
+
+    function renderMarkdown(text) {
+      const md = document.getElementById('response-markdown');
+      if (!md) return;
+      const html = marked.parse(text || '');
+      md.innerHTML = html;
+      md.querySelectorAll('pre code').forEach(block => {
+        hljs.highlightElement(block);
+        const btn = document.createElement('button');
+        btn.textContent = 'Copy code';
+        btn.className = 'copy-btn';
+        btn.addEventListener('click', () => {
+          navigator.clipboard.writeText(block.textContent || '');
+          toast('Code block copied');
+        });
+        block.parentElement.insertBefore(btn, block);
+      });
+    }
+
+    async function loadModels() {
+      const select = document.getElementById('model-select');
+      if (!select) return;
+      select.innerHTML = '<option>Loading models…</option>';
+      try {
+        const models = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('get_available_models');
+        select.innerHTML = '';
+        if (Array.isArray(models) && models.length) {
+          models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m; opt.textContent = m; select.appendChild(opt);
+          });
+          const saved = store?.getItem('lpc-model');
+          if (saved && models.includes(saved)) select.value = saved;
+          state.currentModel = select.value;
+          document.getElementById('meta-model').textContent = `Model: ${state.currentModel}`;
+          setStatus('Ready', 'success');
+        } else {
+          select.innerHTML = '<option>No models found</option>';
+          setStatus('No models available', 'error');
         }
-        return !!window.__TAURI__;
+      } catch (e) {
+        console.error(e);
+        select.innerHTML = '<option>Error loading models</option>';
+        setStatus('Cannot reach Ollama', 'error');
+      }
+    }
+
+    function renderContext(results) {
+      const list = document.getElementById('context-list');
+      if (!list) return;
+      if (!results || !results.length) {
+        list.innerHTML = '<li class="source-item">No references found.</li>';
+        return;
+      }
+      list.innerHTML = results.map(r => `
+        <li class="source-item">
+          <div class="source-score">Score ${(r.relevance_score * 100).toFixed(1)}%</div>
+          <div>${r.path}</div>
+          <pre style="white-space:pre-wrap; margin-top:6px;">${r.snippet}</pre>
+        </li>`).join('');
+    }
+
+    async function fetchContext(question) {
+      try {
+        const results = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('search_references', { query: question });
+        renderContext(results);
+      } catch (e) {
+        console.warn('context fetch failed', e);
+        renderContext([]);
+      }
+    }
+
+    async function sendPrompt() {
+      const q = (document.getElementById('question').value || '').trim();
+      if (!q) { toast('Enter a prompt first'); return; }
+      if (state.loading) { toast('Already running'); return; }
+
+      const rag = document.getElementById('rag-toggle').checked;
+      const systemPrompt = document.getElementById('system-prompt').value || '';
+      const payloadQuestion = systemPrompt ? `${systemPrompt}\n\n${q}` : q;
+
+      const opts = {
+        model: document.getElementById('model-select').value,
+        question: payloadQuestion,
+        context_type: rag ? 'references' : null,
+        temperature: parseFloat(document.getElementById('temperature').value),
+        top_p: parseFloat(document.getElementById('top-p').value),
+        top_k: parseInt(document.getElementById('top-k').value, 10),
+        num_predict: parseInt(document.getElementById('num-predict').value, 10)
       };
 
-      const tauriReady = await waitForTauri();
-      console.log('tauriReady:', tauriReady, 'window.__TAURI__ keys:', window.__TAURI__ ? Object.keys(window.__TAURI__) : null);
-      // populate runtime diagnostics box
-      try{
-        const elOrigin = document.getElementById('diag-origin'); if(elOrigin) elOrigin.textContent = 'origin: '+location.href;
-        const elUA = document.getElementById('diag-ua'); if(elUA) elUA.textContent = 'ua: '+(navigator.userAgent||'');
-        const elT = document.getElementById('diag-tauri'); if(elT) elT.textContent = '__TAURI__: '+(!!window.__TAURI__);
-      }catch(e){console.warn('diag update failed', e)}
+      state.loading = true;
+      state.cancelToken += 1;
+      const token = state.cancelToken;
+      setStatus('Generating...', 'warning');
+      const started = performance.now();
+      renderMarkdown('');
 
-      // diagnostics toggle state (persist in localStorage when available)
-      try{
-        const diagEl = document.getElementById('diagnostics');
-        const toggleBtn = document.getElementById('diag-toggle');
-        const storage = safeStorage();
-        const stored = storage ? storage.getItem('diagVisible') : null;
-        const visible = stored === '1';
-        if(diagEl){ if(visible) diagEl.classList.remove('hidden'); else diagEl.classList.add('hidden'); }
-        if(toggleBtn){ toggleBtn.addEventListener('click', ()=>{
-          if(!diagEl) return;
-          const isHidden = diagEl.classList.toggle('hidden');
-          if(storage) storage.setItem('diagVisible', isHidden ? '0' : '1');
-        }); }
-      }catch(e){console.warn('diag toggle init failed', e)}
+      if (rag) fetchContext(q);
+      persistSettings();
+      store?.setItem('lpc-model', opts.model);
+      document.getElementById('meta-model').textContent = `Model: ${opts.model}`;
 
-      // Tauri invoke helper
-      const invoke = window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke || function(){ return Promise.reject(new Error('Tauri invoke not available')); };
-
-      const askBtn = document.getElementById('ask-btn');
-      const clearBtn = document.getElementById('clear-btn');
-      const copyBtn = document.getElementById('copy-btn');
-      const responseEl = document.getElementById('response');
-      const sourcesEl = document.getElementById('sources');
-      const statusMsg = document.getElementById('status-msg');
-      const backendStatus = document.getElementById('backend-status');
-
-      let defaultModel = 'qwen2.5-coder:3b';
-
-      async function initBackend() {
-        try{
-          const models = await invoke('list_models');
-          if(Array.isArray(models) && models.length>0){ defaultModel = models[0]; backendStatus.textContent = 'Connected'; backendStatus.style.color = '#8f8'; }
-          else { backendStatus.textContent = 'No models'; backendStatus.style.color = '#fa6'; }
-        }catch(e){ backendStatus.textContent = 'Disconnected'; backendStatus.style.color = '#f66'; console.warn('list_models failed', e); }
+      try {
+        const answer = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('ask_ollama', opts);
+        if (token !== state.cancelToken) return; // cancelled
+        renderMarkdown(answer || '');
+        const latency = performance.now() - started;
+        document.getElementById('meta-latency').textContent = `Latency: ${latency.toFixed(0)} ms`;
+        setStatus('Complete', 'success');
+      } catch (e) {
+        if (token !== state.cancelToken) return;
+        renderMarkdown(`**Error:** ${e?.message || e}`);
+        setStatus('Error running generation', 'error');
+      } finally {
+        state.loading = false;
       }
+    }
 
-      async function doAsk(){
-        const question = document.getElementById('question')?.value || '';
-        if(!question.trim()){ showToast('Enter a question','error'); return; }
-        statusMsg.textContent = 'Searching references...'; responseEl.textContent = '';
-
-        // Get top sources from index
-        let sources = [];
-        try{
-          sources = await invoke('search_examples', { keyword: question });
-        }catch(e){ console.warn('search_examples failed', e); }
-
-        if(Array.isArray(sources) && sources.length>0){
-          sourcesEl.textContent = 'Sources: ' + sources.slice(0,5).join(', ');
-        } else {
-          sourcesEl.textContent = 'Sources: (none)';
-        }
-
-        statusMsg.textContent = 'Asking model...';
-        try{
-          const answer = await invoke('ask_ollama', { model: defaultModel, question: question, context_type: 'references' });
-          responseEl.textContent = answer || '(no response)';
-          statusMsg.textContent = 'Done';
-        }catch(e){
-          responseEl.textContent = 'ERROR: ' + (e?.message || String(e));
-          statusMsg.textContent = 'Error';
-          showToast('Request failed','error');
-        }
+    async function stopGeneration() {
+      state.cancelToken += 1;
+      try {
+        await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('stop_generation');
+      } catch (e) {
+        console.warn('stop_generation failed', e);
       }
+      setStatus('Stopped', 'warning');
+    }
 
-      askBtn?.addEventListener('click', doAsk);
-      clearBtn?.addEventListener('click', ()=>{ document.getElementById('question').value=''; responseEl.textContent=''; sourcesEl.textContent='Sources: none'; statusMsg.textContent='Ready'; });
-      copyBtn?.addEventListener('click', ()=>{ try{ navigator.clipboard.writeText(responseEl.textContent||''); showToast('Copied','success'); }catch(e){ showToast('Copy failed','error'); } });
+    function bindEvents() {
+      ['temperature','top-p','top-k','num-predict'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          updateSliderLabels();
+          persistSettings();
+        });
+      });
+      document.getElementById('system-prompt').addEventListener('input', persistSettings);
+      document.getElementById('rag-toggle').addEventListener('change', persistSettings);
+      document.getElementById('ask-btn').addEventListener('click', sendPrompt);
+      document.getElementById('clear-btn').addEventListener('click', () => {
+        document.getElementById('question').value = '';
+        renderMarkdown('Cleared.');
+        setStatus('Ready');
+      });
+      document.getElementById('copy-response').addEventListener('click', () => {
+        const text = document.getElementById('response-markdown').innerText || '';
+        navigator.clipboard.writeText(text);
+        toast('Response copied');
+      });
+      document.getElementById('refresh-models').addEventListener('click', loadModels);
+      document.getElementById('model-select').addEventListener('change', (e) => {
+        state.currentModel = e.target.value;
+        store?.setItem('lpc-model', state.currentModel);
+        document.getElementById('meta-model').textContent = `Model: ${state.currentModel}`;
+      });
+      document.getElementById('stop-btn').addEventListener('click', stopGeneration);
+      document.getElementById('question').addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();
+      });
+    }
 
-      initBackend();
-    })();
-  });
+    function initThemeToggle() {
+      const btn = document.getElementById('theme-toggle');
+      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+      let mode = store?.getItem('lpc-theme') || (prefersLight ? 'light' : 'dark');
+      applyTheme(mode);
+      btn.addEventListener('click', () => {
+        mode = mode === 'dark' ? 'light' : 'dark';
+        applyTheme(mode);
+        store?.setItem('lpc-theme', mode);
+      });
+    }
+
+    function applyTheme(mode) {
+      if (mode === 'light') {
+        document.documentElement.style.setProperty('--bg', '#f5f7fb');
+        document.documentElement.style.setProperty('--panel', '#ffffff');
+        document.documentElement.style.setProperty('--panel-2', '#f0f4fa');
+        document.documentElement.style.setProperty('--text', '#0f172a');
+        document.documentElement.style.setProperty('--muted', '#475569');
+        document.documentElement.style.setProperty('--border', '#d7deea');
+        document.documentElement.style.setProperty('--code', '#e2e8f0');
+      } else {
+        document.documentElement.style.removeProperty('--bg');
+        document.documentElement.style.removeProperty('--panel');
+        document.documentElement.style.removeProperty('--panel-2');
+        document.documentElement.style.removeProperty('--text');
+        document.documentElement.style.removeProperty('--muted');
+        document.documentElement.style.removeProperty('--border');
+        document.documentElement.style.removeProperty('--code');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      loadSettings();
+      bindEvents();
+      initThemeToggle();
+      
+      // Check setup status on startup
+      await checkSetup();
+      
+      await loadModels();
+      setStatus('Ready', 'success');
+    });
+
+    async function checkSetup() {
+      try {
+        const status = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('get_setup_status');
+        
+        if (!status.ollama_installed) {
+          const proceed = confirm(
+            'Ollama not detected!\n\n' +
+            'LPC Dev Assistant requires Ollama to be installed and running.\n\n' +
+            'Please install Ollama from https://ollama.ai and start it.\n\n' +
+            'Click OK to continue anyway, or Cancel to exit.'
+          );
+          if (!proceed) {
+            window.close();
+            return;
+          }
+        }
+        
+        if (status.first_run && !status.index_built) {
+          const runSetup = confirm(
+            'First Run Setup\n\n' +
+            'The application needs to extract reference archives and build the search index.\n' +
+            'This may take a few minutes.\n\n' +
+            'Click OK to run setup now.'
+          );
+          
+          if (runSetup) {
+            setStatus('Running initial setup...', 'warning');
+            try {
+              const result = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('run_initial_setup');
+              toast(result);
+              await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('mark_setup_complete');
+              setStatus('Setup complete', 'success');
+            } catch (e) {
+              setStatus('Setup failed: ' + e, 'error');
+              toast('Setup failed. Some features may not work.');
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Setup check failed', e);
+      }
+    }
   </script>
 </body>
 </html>
