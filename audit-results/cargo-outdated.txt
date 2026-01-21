@@ -1,6 +1,0 @@
-error: no such command: `outdated`
-
-help: a command with a similar name exists: `update`
-
-help: view all installed commands with `cargo --list`
-help: find a package to install `outdated` with `cargo search cargo-outdated`
