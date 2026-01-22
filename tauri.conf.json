@@ -12,7 +12,6 @@
     "withGlobalTauri": true,
     "security": {
       "csp": null,
-      "capabilities": ["main"],
       "assetProtocol": {
         "enable": true,
         "scope": ["$APPDATA/*", "$RESOURCE/*"]
