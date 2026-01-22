@@ -207,6 +207,31 @@
       margin-bottom: 6px;
     }
 
+    .prompt-container {
+      position: relative;
+    }
+
+    .copy-prompt-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 5;
+      transition: all 0.2s ease;
+    }
+
+    .copy-prompt-btn:hover {
+      background: var(--panel-2);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
     .toast {
       position: fixed;
       right: 18px;
@@ -237,7 +262,6 @@
       <div class="status" id="conn-status"><span class="dot"></span><span id="status-text">Connecting…</span></div>
       <select id="model-select" class="select"></select>
       <button id="refresh-models">Refresh Models</button>
-      <button id="theme-toggle">Toggle Theme</button>
     </div>
   </header>
 
@@ -249,7 +273,10 @@
           <span class="tag">Ctrl+Enter to send</span>
         </div>
       </div>
-      <textarea id="question" placeholder="Ask about driver, efuns, mudlib patterns, or paste code for guidance."></textarea>
+      <div class="prompt-container">
+        <textarea id="question" placeholder="Ask about driver, efuns, mudlib patterns, or paste code for guidance."></textarea>
+        <button class="copy-prompt-btn" id="copy-prompt-btn">Copy</button>
+      </div>
       <div class="btn-row" style="margin-top:12px;">
         <button class="primary" id="ask-btn">Ask</button>
         <button id="stop-btn">Stop</button>
@@ -549,44 +576,22 @@
       document.getElementById('question').addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();
       });
-    }
-
-    function initThemeToggle() {
-      const btn = document.getElementById('theme-toggle');
-      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-      let mode = store?.getItem('lpc-theme') || (prefersLight ? 'light' : 'dark');
-      applyTheme(mode);
-      btn.addEventListener('click', () => {
-        mode = mode === 'dark' ? 'light' : 'dark';
-        applyTheme(mode);
-        store?.setItem('lpc-theme', mode);
+      document.getElementById('copy-prompt-btn').addEventListener('click', () => {
+        const promptText = document.getElementById('question').value || '';
+        if (!promptText.trim()) {
+          toast('No prompt to copy');
+          return;
+        }
+        navigator.clipboard.writeText(promptText);
+        toast('Prompt copied!');
       });
     }
 
-    function applyTheme(mode) {
-      if (mode === 'light') {
-        document.documentElement.style.setProperty('--bg', '#f5f7fb');
-        document.documentElement.style.setProperty('--panel', '#ffffff');
-        document.documentElement.style.setProperty('--panel-2', '#f0f4fa');
-        document.documentElement.style.setProperty('--text', '#0f172a');
-        document.documentElement.style.setProperty('--muted', '#475569');
-        document.documentElement.style.setProperty('--border', '#d7deea');
-        document.documentElement.style.setProperty('--code', '#e2e8f0');
-      } else {
-        document.documentElement.style.removeProperty('--bg');
-        document.documentElement.style.removeProperty('--panel');
-        document.documentElement.style.removeProperty('--panel-2');
-        document.documentElement.style.removeProperty('--text');
-        document.documentElement.style.removeProperty('--muted');
-        document.documentElement.style.removeProperty('--border');
-        document.documentElement.style.removeProperty('--code');
-      }
-    }
+
 
     document.addEventListener('DOMContentLoaded', async () => {
       loadSettings();
       bindEvents();
-      initThemeToggle();
       
       // Check setup status on startup
       await checkSetup();
