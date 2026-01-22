@@ -3,6 +3,8 @@
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}};
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 use tauri::{Window, Manager, AppHandle};
 use tauri::Emitter;
@@ -226,7 +228,21 @@ fn start_ollama() -> Result<String, String> {
             .args(&["/C", "start", "cmd", "/K", "ollama", "serve"])
             .spawn()
             .map_err(|e| format!("Failed to start Ollama: {}", e))?;
-        Ok("Ollama started in new terminal".to_string())
+        // Give Ollama time to spin up, then retry connectivity a few times
+        let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+        for attempt in 0..3 {
+            thread::sleep(Duration::from_secs(2));
+            if let Ok(client) = OllamaClient::new() {
+                let ok = rt.block_on(async { client.list_models().await.is_ok() });
+                if ok {
+                    return Ok("Ollama started and reachable".to_string());
+                }
+            }
+            if attempt == 2 {
+                return Ok("Ollama started, but connection not confirmed. Please wait a moment then retry.".to_string());
+            }
+        }
+        Ok("Ollama start attempted".to_string())
     }
     
     #[cfg(not(target_os = "windows"))]
@@ -235,7 +251,20 @@ fn start_ollama() -> Result<String, String> {
             .args(&["-c", "ollama serve &"])
             .spawn()
             .map_err(|e| format!("Failed to start Ollama: {}", e))?;
-        Ok("Ollama started in background".to_string())
+        let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+        for attempt in 0..3 {
+            thread::sleep(Duration::from_secs(2));
+            if let Ok(client) = OllamaClient::new() {
+                let ok = rt.block_on(async { client.list_models().await.is_ok() });
+                if ok {
+                    return Ok("Ollama started and reachable".to_string());
+                }
+            }
+            if attempt == 2 {
+                return Ok("Ollama started, but connection not confirmed. Please wait a moment then retry.".to_string());
+            }
+        }
+        Ok("Ollama start attempted".to_string())
     }
 }
 
@@ -352,13 +381,13 @@ fn main() {
         }
     };
 
-    if corpus_root.exists() && !first_run_flag {
+    if corpus_root.exists() {
         match mud_index.build_index() {
             Ok(count) => eprintln!("Indexed {} files from mud-references", count),
             Err(e) => eprintln!("Failed to build index: {}", e),
         }
     } else {
-        eprintln!("Skipping index build (first run or corpus missing)");
+        eprintln!("Skipping index build (corpus missing)");
     }
 
     let state = AppState {

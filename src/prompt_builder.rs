@@ -231,11 +231,11 @@ impl PromptBuilder {
         out.push_str("User Query: ");
         out.push_str(user_query);
         out.push_str("\n\nInstructions:\n");
-        out.push_str("1. Use APIs from provided headers (codegen.h, vm.h) - never redefine\n");
-        out.push_str("2. Follow MudOS/FluffOS patterns from references\n");
+        out.push_str("1. Follow MudOS/FluffOS patterns from references; avoid redefining platform APIs\n");
+        out.push_str("2. Keep outputs self-contained: include only what is referenced in retrieved snippets\n");
         out.push_str("3. For codegen: emit bytecode opcodes only, traverse AST recursively\n");
         out.push_str("4. For object/efun tasks: use CALL_METHOD/OP_SUPER_CALL, respect master hooks, avoid redefinitions\n");
-        out.push_str("5. Return complete, compilable C code\n");
+        out.push_str("5. Return complete, compilable C code with clear headers and no placeholder TODOs\n");
 
         // Trim to fit max tokens (8000 tokens ~= 32k chars)
         let max_tokens = 8000usize;

@@ -412,36 +412,38 @@
       headerCompliance: false,
       opcodeCount: 0,
       issues: [],
-      score: 0,
+      score: null,
       callMethodUse: false,
       hasCodegenEmit: false,
     };
 
     function analyzeResponse(answer) {
-      const headers = ["vm.h", "codegen.h", "object.h"];
-      const headerMissing = headers.filter(h => !answer.includes(`#include "${h}"`) && !answer.includes(`#include <${h}>`));
-      const opcodeMatches = answer.match(/OP_[A-Z0-9_]+/g) || [];
-      const uniqueOpcodes = Array.from(new Set(opcodeMatches));
-      const callMethodUse = /CALL_METHOD|call_method|OP_CALL_METHOD/.test(answer);
-      const hasCodegenEmit = /codegen_emit_op|codegen_emit_arg/.test(answer);
+      const text = answer || '';
+      const codeFenceCount = (text.match(/```/g) || []).length / 2;
+      const hasFence = codeFenceCount >= 1;
+      const lengthOk = text.trim().length >= 200;
+      const hasInclude = /#include\s+[<"]/i.test(text);
+      const hasFunction = /\b(void|int|static|char|struct)\s+[A-Za-z_][A-Za-z0-9_]*\s*\(/.test(text);
+      const qualitySignals = ["struct", "switch", "return", "efun", "object", "call_other", "CALL_METHOD", "apply", "opcode", "emit"]; 
+      const signalCount = qualitySignals.reduce((acc, sig) => acc + (text.includes(sig) ? 1 : 0), 0);
 
       const issues = [];
-      if (headerMissing.length) issues.push(`Missing headers: ${headerMissing.join(', ')}`);
-      if (!callMethodUse) issues.push("CALL_METHOD/OP_CALL_METHOD not detected");
-      if (!hasCodegenEmit) issues.push("codegen_emit_op missing in generated code");
-      if (uniqueOpcodes.length < 3) issues.push("Too few opcode references (<3)");
+      if (!lengthOk) issues.push("Response too short (<200 chars)");
+      if (!hasFence) issues.push("No code block detected");
+      if (!hasFunction) issues.push("No function signatures detected");
+      if (!hasInclude) issues.push("No includes or headers referenced");
 
-      const base = 10 - issues.length * 1.2;
-      const bonus = (hasCodegenEmit ? 0.5 : 0) + (callMethodUse ? 0.5 : 0) + Math.min(uniqueOpcodes.length, 20) * 0.05;
+      const base = 10 - issues.length * 1.5;
+      const bonus = (hasFence ? 0.6 : 0) + (hasInclude ? 0.4 : 0) + (hasFunction ? 0.6 : 0) + Math.min(signalCount, 8) * 0.25;
       const score = Math.max(0, Math.min(10, base + bonus));
 
       return {
-        headerCompliance: headerMissing.length === 0,
-        opcodeCount: uniqueOpcodes.length,
+        headerCompliance: issues.length === 0,
+        opcodeCount: signalCount,
         issues,
         score: Number(score.toFixed(1)),
-        callMethodUse,
-        hasCodegenEmit,
+        callMethodUse: hasFunction,
+        hasCodegenEmit: hasFence,
       };
     }
 
@@ -455,12 +457,12 @@
       const issueList = document.getElementById('issue-list');
       if (!headerBadge || !headerStatus || !opcodeCount || !issueList) return;
 
-      headerBadge.textContent = metrics.headerCompliance ? 'OK' : 'Missing';
+      headerBadge.textContent = metrics.headerCompliance ? 'Ready' : 'Needs review';
       headerBadge.className = `badge ${metrics.headerCompliance ? 'ok' : 'err'}`;
-      headerStatus.textContent = metrics.headerCompliance ? 'Headers present' : 'Headers missing';
+      headerStatus.textContent = metrics.headerCompliance ? 'Structure looks valid' : 'Add code fences and functions';
       opcodeCount.textContent = metrics.opcodeCount;
-      opcodeMeta.textContent = metrics.callMethodUse ? 'CALL_METHOD detected' : 'Add CALL_METHOD/OP_SUPER_CALL';
-      qualityScore.textContent = metrics.score ? metrics.score.toFixed(1) : '-';
+      opcodeMeta.textContent = metrics.callMethodUse ? 'Functions detected' : 'Add function definitions';
+      qualityScore.textContent = (typeof metrics.score === 'number') ? metrics.score.toFixed(1) : '--';
       qualityMeta.textContent = metrics.headerCompliance ? 'Validated' : 'Pending fixes';
 
       issueList.innerHTML = '';
@@ -480,8 +482,8 @@
       const pill = document.getElementById('score-pill');
       const note = document.getElementById('scoring-note');
       if (!pill || !note) return;
-      pill.textContent = `Score: ${metrics.score ? metrics.score.toFixed(1) : '--'}/10`;
-      note.textContent = `${metrics.opcodeCount} unique opcodes · ${metrics.headerCompliance ? 'Headers OK' : 'Headers missing'}`;
+      pill.textContent = `Score: ${(typeof metrics.score === 'number') ? metrics.score.toFixed(1) : '--'}/10`;
+      note.textContent = `${metrics.opcodeCount} signals · ${metrics.headerCompliance ? 'Looks good' : 'Needs attention'}`;
     }
 
     function persistSettings() {
@@ -745,13 +747,26 @@
           );
           if (startOllama) {
             try {
+              setStatus('Starting Ollama...', 'info');
               await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('start_ollama');
-              toast('Starting Ollama... Please wait a few seconds.');
-              // Wait 3 seconds for Ollama to start
-              await new Promise(resolve => setTimeout(resolve, 3000));
+              toast('Starting Ollama... Please wait.');
+              // Poll for availability up to ~8 seconds
+              for (let i = 0; i < 4; i++) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                try {
+                  await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('check_ollama_health');
+                  setStatus('Ready', 'success');
+                  break;
+                } catch (pollErr) {
+                  if (i === 3) {
+                    throw pollErr;
+                  }
+                  setStatus('Connecting to Ollama...', 'info');
+                }
+              }
             } catch (e) {
               const proceed = confirm(
-                'Failed to start Ollama automatically: ' + e + '\n\n' +
+                'Failed to confirm Ollama startup: ' + e + '\n\n' +
                 'Please start Ollama manually by running "ollama serve" in a terminal.\n\n' +
                 'Click OK to continue anyway.'
               );
