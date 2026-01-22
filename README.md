@@ -25,20 +25,19 @@ A cross-platform desktop application for LPC development, powered by Rust and Ol
 
 ## Installation
 
-### Windows
-Download the installer from the [latest release](https://github.com/Thurtea/lpc-development-assistant/releases) and run it. The installer will:
-1. Detect if Ollama is installed
-2. Extract reference documentation
-3. Build the search index
-4. Launch the app
+### Quick Install (Pre-Built)
+**Download from [GitHub Releases](https://github.com/Thurtea/lpc-development-assistant/releases):**
 
-### macOS
-Download the `.dmg` file from [releases](https://github.com/Thurtea/lpc-development-assistant/releases) and drag the app to Applications.
+#### Windows
+Download `LPC Dev Assistant_0.1.0_x64_en-US.msi` and run the installer.
+
+#### macOS
+Download `.dmg` file and drag the app to Applications.
 
 Supports both Intel (x86_64) and Apple Silicon (aarch64).
 
-### Linux
-Download the `.AppImage` or `.deb` file from [releases](https://github.com/Thurtea/lpc-development-assistant/releases).
+#### Linux
+Download `.AppImage` or `.deb` file from releases.
 
 **AppImage:** Make executable and run
 ```bash
@@ -51,6 +50,19 @@ chmod +x LPC_Dev_Assistant_*.AppImage
 sudo apt install ./lpc-dev-assistant_*.deb
 lpc-dev-assistant
 ```
+
+### Build from Source (Optional)
+If you prefer to build locally or releases aren't available yet:
+```bash
+git clone https://github.com/Thurtea/lpc-development-assistant.git
+cd lpc-development-assistant
+cargo tauri build
+```
+Installers will be in `target/release/bundle/`
+
+---
+
+**Note:** The `target/` folder is not in the repository (standard Rust practice). Pre-built installers are distributed via [GitHub Releases](https://github.com/Thurtea/lpc-development-assistant/releases).
 
 ## Building from Source
 
