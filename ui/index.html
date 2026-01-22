@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LPC MUD Development Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -31,7 +34,7 @@
                   radial-gradient(circle at 80% 10%, rgba(6,182,212,0.05), transparent 22%),
                   var(--bg);
       color: var(--text);
-      font-family: "Segoe UI", "SF Pro Display", "Inter", sans-serif;
+      font-family: "Sora", "SF Pro Display", "Inter", sans-serif;
       min-height: 100vh;
     }
 
@@ -184,6 +187,21 @@
     .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
     .chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; color: var(--muted); font-size: 12px; }
 
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 6px; }
+    .metric-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
+    .metric-title { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+    .metric-value { font-size: 18px; font-weight: 700; margin-top: 6px; display: flex; align-items: baseline; gap: 6px; }
+    .metric-sub { font-size: 12px; color: var(--muted); }
+    .score-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0b1016; border-radius: 12px; font-weight: 700; box-shadow: var(--shadow); }
+    .issue-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; }
+    .issue-item { padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
+    .issue-item.bad { border-color: var(--error); color: #fecdd3; }
+    .issue-item.good { border-color: var(--success); color: #d1fae5; }
+    .badge { padding: 4px 8px; border-radius: 999px; font-size: 11px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); }
+    .badge.ok { border-color: var(--success); color: var(--success); }
+    .badge.warn { border-color: var(--warning); color: var(--warning); }
+    .badge.err { border-color: var(--error); color: var(--error); }
+
     .source-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
     .source-item { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); }
     .source-score { color: var(--accent); font-weight: 700; font-size: 12px; }
@@ -333,7 +351,31 @@
         <div id="response-markdown" class="markdown-body">Waiting for a prompt.</div>
       </div>
 
-      <div class="section-title" style="margin-top:14px;">Context Used</div>
+      <div class="section-title" style="margin-top:14px;">Validation</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-title">Header compliance <span id="header-badge" class="badge">-</span></div>
+          <div class="metric-value" id="header-status">Pending</div>
+          <div class="metric-sub">Expect vm.h, codegen.h</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Opcode usage</div>
+          <div class="metric-value"><span id="opcode-count">0</span><span class="metric-sub">unique OP_*</span></div>
+          <div class="metric-sub" id="opcode-meta">Awaiting run</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Quality score</div>
+          <div class="metric-value"><span id="quality-score">-</span><span class="metric-sub">/10</span></div>
+          <div class="metric-sub" id="quality-meta">Pending analysis</div>
+        </div>
+      </div>
+      <ul id="issue-list" class="issue-list"><li class="issue-item">No validation issues yet.</li></ul>
+
+      <div class="section-title" style="margin-top:14px;">Test Scoring</div>
+      <div class="score-pill" id="score-pill">Score: --</div>
+      <div class="metric-sub" id="scoring-note">Waiting for generation.</div>
+
+      <div class="section-title" style="margin-top:14px;">RAG Debug (Top 15)</div>
       <ul class="source-list" id="context-list">
         <li class="source-item">No references yet.</li>
       </ul>
@@ -354,6 +396,7 @@
       currentModel: '',
       loading: false,
       cancelToken: 0,
+      lastMetrics: null,
     };
 
     const settingsDefaults = {
@@ -364,6 +407,82 @@
       rag: true,
       system_prompt: ''
     };
+
+    const emptyMetrics = {
+      headerCompliance: false,
+      opcodeCount: 0,
+      issues: [],
+      score: 0,
+      callMethodUse: false,
+      hasCodegenEmit: false,
+    };
+
+    function analyzeResponse(answer) {
+      const headers = ["vm.h", "codegen.h", "object.h"];
+      const headerMissing = headers.filter(h => !answer.includes(`#include "${h}"`) && !answer.includes(`#include <${h}>`));
+      const opcodeMatches = answer.match(/OP_[A-Z0-9_]+/g) || [];
+      const uniqueOpcodes = Array.from(new Set(opcodeMatches));
+      const callMethodUse = /CALL_METHOD|call_method|OP_CALL_METHOD/.test(answer);
+      const hasCodegenEmit = /codegen_emit_op|codegen_emit_arg/.test(answer);
+
+      const issues = [];
+      if (headerMissing.length) issues.push(`Missing headers: ${headerMissing.join(', ')}`);
+      if (!callMethodUse) issues.push("CALL_METHOD/OP_CALL_METHOD not detected");
+      if (!hasCodegenEmit) issues.push("codegen_emit_op missing in generated code");
+      if (uniqueOpcodes.length < 3) issues.push("Too few opcode references (<3)");
+
+      const base = 10 - issues.length * 1.2;
+      const bonus = (hasCodegenEmit ? 0.5 : 0) + (callMethodUse ? 0.5 : 0) + Math.min(uniqueOpcodes.length, 20) * 0.05;
+      const score = Math.max(0, Math.min(10, base + bonus));
+
+      return {
+        headerCompliance: headerMissing.length === 0,
+        opcodeCount: uniqueOpcodes.length,
+        issues,
+        score: Number(score.toFixed(1)),
+        callMethodUse,
+        hasCodegenEmit,
+      };
+    }
+
+    function renderValidation(metrics = emptyMetrics) {
+      const headerBadge = document.getElementById('header-badge');
+      const headerStatus = document.getElementById('header-status');
+      const opcodeCount = document.getElementById('opcode-count');
+      const opcodeMeta = document.getElementById('opcode-meta');
+      const qualityScore = document.getElementById('quality-score');
+      const qualityMeta = document.getElementById('quality-meta');
+      const issueList = document.getElementById('issue-list');
+      if (!headerBadge || !headerStatus || !opcodeCount || !issueList) return;
+
+      headerBadge.textContent = metrics.headerCompliance ? 'OK' : 'Missing';
+      headerBadge.className = `badge ${metrics.headerCompliance ? 'ok' : 'err'}`;
+      headerStatus.textContent = metrics.headerCompliance ? 'Headers present' : 'Headers missing';
+      opcodeCount.textContent = metrics.opcodeCount;
+      opcodeMeta.textContent = metrics.callMethodUse ? 'CALL_METHOD detected' : 'Add CALL_METHOD/OP_SUPER_CALL';
+      qualityScore.textContent = metrics.score ? metrics.score.toFixed(1) : '-';
+      qualityMeta.textContent = metrics.headerCompliance ? 'Validated' : 'Pending fixes';
+
+      issueList.innerHTML = '';
+      if (!metrics.issues || metrics.issues.length === 0) {
+        issueList.innerHTML = '<li class="issue-item good">No validation issues detected.</li>';
+      } else {
+        metrics.issues.forEach(issue => {
+          const li = document.createElement('li');
+          li.className = 'issue-item bad';
+          li.textContent = issue;
+          issueList.appendChild(li);
+        });
+      }
+    }
+
+    function renderScorePill(metrics = emptyMetrics) {
+      const pill = document.getElementById('score-pill');
+      const note = document.getElementById('scoring-note');
+      if (!pill || !note) return;
+      pill.textContent = `Score: ${metrics.score ? metrics.score.toFixed(1) : '--'}/10`;
+      note.textContent = `${metrics.opcodeCount} unique opcodes · ${metrics.headerCompliance ? 'Headers OK' : 'Headers missing'}`;
+    }
 
     function persistSettings() {
       if (!store) return;
@@ -471,17 +590,17 @@
         list.innerHTML = '<li class="source-item">No references found.</li>';
         return;
       }
-      list.innerHTML = results.map(r => `
+      list.innerHTML = results.map((r, idx) => `
         <li class="source-item">
-          <div class="source-score">Score ${(r.relevance_score * 100).toFixed(1)}%</div>
-          <div>${r.path}</div>
+          <div class="source-score">#${idx + 1} • ${((r.relevance_score || 0) * 100).toFixed(1)}%</div>
+          <div>${r.path}${r.line_number !== undefined ? `:${r.line_number + 1}` : ''}</div>
           <pre style="white-space:pre-wrap; margin-top:6px;">${r.snippet}</pre>
         </li>`).join('');
     }
 
     async function fetchContext(question) {
       try {
-        const results = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('search_references', { query: question });
+        const results = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('search_references', { query: question, limit: 15 });
         renderContext(results);
       } catch (e) {
         console.warn('context fetch failed', e);
@@ -514,6 +633,8 @@
       setStatus('Generating...', 'warning');
       const started = performance.now();
       renderMarkdown('');
+      renderValidation(emptyMetrics);
+      renderScorePill(emptyMetrics);
 
       if (rag) fetchContext(q);
       persistSettings();
@@ -524,12 +645,18 @@
         const answer = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('ask_ollama', opts);
         if (token !== state.cancelToken) return; // cancelled
         renderMarkdown(answer || '');
+        const metrics = analyzeResponse(answer || '');
+        state.lastMetrics = metrics;
+        renderValidation(metrics);
+        renderScorePill(metrics);
         const latency = performance.now() - started;
         document.getElementById('meta-latency').textContent = `Latency: ${latency.toFixed(0)} ms`;
         setStatus('Complete', 'success');
       } catch (e) {
         if (token !== state.cancelToken) return;
         renderMarkdown(`**Error:** ${e?.message || e}`);
+        renderValidation(emptyMetrics);
+        renderScorePill(emptyMetrics);
         setStatus('Error running generation', 'error');
       } finally {
         state.loading = false;
@@ -559,6 +686,9 @@
       document.getElementById('clear-btn').addEventListener('click', () => {
         document.getElementById('question').value = '';
         renderMarkdown('Cleared.');
+        renderValidation(emptyMetrics);
+        renderScorePill(emptyMetrics);
+        renderContext([]);
         setStatus('Ready');
       });
       document.getElementById('copy-response').addEventListener('click', () => {
@@ -592,6 +722,8 @@
     document.addEventListener('DOMContentLoaded', async () => {
       loadSettings();
       bindEvents();
+      renderValidation(emptyMetrics);
+      renderScorePill(emptyMetrics);
       
       // Check setup status on startup
       await checkSetup();

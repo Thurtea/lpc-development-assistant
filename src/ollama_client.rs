@@ -76,6 +76,69 @@ impl OllamaClient {
         })
     }
 
+    /// Validate generated code for header usage and struct redefinitions
+    pub fn validate_generated_code(code: &str, expected_headers: &[&str]) -> Vec<String> {
+        let mut issues = Vec::new();
+
+        // Check for header includes
+        let has_required_headers = expected_headers.iter().all(|header| {
+            code.contains(&format!("#include \"{}\"", header)) ||
+            code.contains(&format!("#include <{}>", header))
+        });
+
+        if !has_required_headers && !expected_headers.is_empty() {
+            for header in expected_headers {
+                if !code.contains(&format!("#include \"{}\"", header)) &&
+                   !code.contains(&format!("#include <{}>", header)) {
+                    issues.push(format!("Missing required header: {}", header));
+                }
+            }
+        }
+
+        // Check for struct redefinitions (pattern: "typedef struct" or "typedef enum")
+        let typedef_pattern = regex::Regex::new(r"typedef\s+(struct|union|enum)\s+\w+").ok();
+        if let Some(regex) = typedef_pattern {
+            for cap in regex.captures_iter(code) {
+                if let Some(m) = cap.get(0) {
+                    issues.push(format!("Detected typedef redefinition (should use provided APIs): {}", m.as_str()));
+                }
+            }
+        }
+
+        // Check for interpreter patterns (evaluate_*, runtime math, instead of bytecode)
+        let interpreter_patterns = [
+            "evaluate_",
+            "eval_expr",
+            "vm_eval",
+            "interpret_",
+            "switch(expr->op)",
+            "switch(node->type) {",
+        ];
+
+        for pattern in &interpreter_patterns {
+            if code.contains(pattern) {
+                issues.push(format!("Detected interpreter pattern (use bytecode emission instead): {}", pattern));
+            }
+        }
+
+        // Check for proper bytecode opcodes
+        let bytecode_patterns = [
+            "OP_PUSH",
+            "OP_POP",
+            "OP_JMP",
+            "OP_CALL",
+            "OP_RETURN",
+            "codegen_emit_op",
+        ];
+
+        let has_bytecode = bytecode_patterns.iter().any(|p| code.contains(p));
+        if !has_bytecode && code.contains("codegen") {
+            issues.push("Codegen function missing bytecode opcodes (use OP_* and codegen_emit_op)".to_string());
+        }
+
+        issues
+    }
+
     pub async fn generate(&self, model: &str, prompt: &str, options: Option<OllamaOptions>) -> Result<String> {
         let request = OllamaGenerateRequest {
             model: model.to_string(),

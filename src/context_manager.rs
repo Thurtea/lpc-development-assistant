@@ -51,7 +51,7 @@ impl ContextManager {
         }
 
         let mut count = 0;
-        let relevant_extensions = ["txt", "md", "c", "h", "lpc"];
+        let relevant_extensions = ["txt", "md", "c", "h", "lpc", "json", "jsonl"];
 
         for entry in WalkDir::new(&self.mud_references_path)
             .into_iter()
@@ -365,6 +365,8 @@ impl ContextManager {
         self.create_template_if_missing("socket_api.txt", include_str!("../templates/socket_api.txt"))?;
         self.create_template_if_missing("comm_summary.txt", include_str!("../templates/comm_summary.txt"))?;
         self.create_template_if_missing("backend_loop.txt", include_str!("../templates/backend_loop.txt"))?;
+        self.create_template_if_missing("driver_codegen.txt", include_str!("../templates/driver_codegen.txt"))?;
+        self.create_template_if_missing("object_system.txt", include_str!("../templates/object_system.txt"))?;
 
         // Additional snippet templates
         self.create_template_if_missing("socket_accept_flow.txt", include_str!("../templates/socket_accept_flow.txt"))?;

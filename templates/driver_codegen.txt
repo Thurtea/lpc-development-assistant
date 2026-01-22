@@ -1,0 +1,252 @@
+DRIVER CODEGEN & BYTECODE COMPILATION PATTERNS
+
+Core Bytecode VM Design (MudOS/FluffOS)
+========================================
+
+The LPC driver compiles LPC source code to bytecode via a 4-stage pipeline:
+  1) Lexer: Tokenize source → token stream
+  2) Parser: Parse tokens → Abstract Syntax Tree (AST)
+  3) Codegen: Walk AST → bytecode instructions + constant pool
+  4) VM: Execute bytecode on stack-based interpreter
+
+Key Structures:
+
+typedef struct CodeGen {
+    unsigned char* code;        // Bytecode buffer
+    size_t code_offset;         // Current write position
+    unsigned char* jumps;       // Jump target placeholders
+    size_t jump_offset;
+    struct ConstantPool* constants;  // Strings, numbers, identifiers
+} CodeGen;
+
+typedef enum OpCode {
+    OP_NOOP,
+    OP_PUSH_INT,        // int arg
+    OP_PUSH_STR,        // string_id arg
+    OP_PUSH_FLOAT,      // float arg
+    OP_POP,
+    OP_DUP,
+    OP_LOAD_LOCAL,      // local var index
+    OP_STORE_LOCAL,
+    OP_LOAD_GLOBAL,     // symbol table index
+    OP_STORE_GLOBAL,
+    OP_CALL_EFUN,       // efun name_id
+    OP_CALL_FUNC,       // function_id
+    OP_RETURN,
+    OP_JMP,             // jump target offset
+    OP_JMP_IF_FALSE,
+    OP_JMP_IF_TRUE,
+    OP_BINARY_ADD,      // Stack: [left, right] → [result]
+    OP_BINARY_SUB,
+    OP_BINARY_MUL,
+    OP_BINARY_DIV,
+    OP_BINARY_MOD,
+    OP_UNARY_NEG,
+    OP_CMP_EQ,
+    OP_CMP_NE,
+    OP_CMP_LT,
+    OP_CMP_LE,
+    OP_CMP_GT,
+    OP_CMP_GE,
+    OP_INDEX_ARRAY,     // a[i]
+    OP_INDEX_MAP,       // m[key]
+    OP_ARRAY_APPEND,
+    OP_MAP_INSERT,
+    OP_ARRAY_SLICE,     // a[i..j]
+} OpCode;
+
+AST Walker Pattern (Recursive Codegen):
+
+void codegen_expr(CodeGen* cg, ASTNode* expr) {
+    if (!expr) return;
+    
+    switch (expr->type) {
+    case EXPR_INT_LITERAL:
+        codegen_emit_op(cg, OP_PUSH_INT);
+        codegen_emit_arg(cg, expr->value.i);
+        break;
+        
+    case EXPR_STRING_LITERAL:
+        codegen_emit_op(cg, OP_PUSH_STR);
+        codegen_emit_arg(cg, constant_pool_add_string(cg->constants, expr->value.s));
+        break;
+        
+    case EXPR_BINARY_OP:
+        codegen_expr(cg, expr->left);     // Emit left operand
+        codegen_expr(cg, expr->right);    // Emit right operand
+        switch (expr->op) {
+        case '+': codegen_emit_op(cg, OP_BINARY_ADD); break;
+        case '-': codegen_emit_op(cg, OP_BINARY_SUB); break;
+        case '*': codegen_emit_op(cg, OP_BINARY_MUL); break;
+        case '/': codegen_emit_op(cg, OP_BINARY_DIV); break;
+        }
+        break;
+        
+    case EXPR_UNARY_OP:
+        codegen_expr(cg, expr->operand);
+        if (expr->op == '-') codegen_emit_op(cg, OP_UNARY_NEG);
+        break;
+        
+    case EXPR_FUNCTION_CALL:
+        // Emit arguments (right-to-left for C calling convention)
+        for (int i = expr->arg_count - 1; i >= 0; i--) {
+            codegen_expr(cg, expr->args[i]);
+        }
+        codegen_emit_op(cg, OP_CALL_FUNC);
+        codegen_emit_arg(cg, expr->func_id);  // Function symbol ID
+        break;
+        
+    case EXPR_ARRAY_INDEX:
+        codegen_expr(cg, expr->array);
+        codegen_expr(cg, expr->index);
+        codegen_emit_op(cg, OP_INDEX_ARRAY);
+        break;
+        
+    case EXPR_VARIABLE:
+        codegen_emit_op(cg, OP_LOAD_LOCAL);
+        codegen_emit_arg(cg, expr->var_index);
+        break;
+    }
+}
+
+void codegen_stmt(CodeGen* cg, ASTNode* stmt) {
+    if (!stmt) return;
+    
+    switch (stmt->type) {
+    case STMT_EXPR:
+        codegen_expr(cg, stmt->expr);
+        codegen_emit_op(cg, OP_POP);  // Discard value
+        break;
+        
+    case STMT_RETURN:
+        if (stmt->expr) codegen_expr(cg, stmt->expr);
+        codegen_emit_op(cg, OP_RETURN);
+        break;
+        
+    case STMT_IF:
+        codegen_expr(cg, stmt->condition);
+        size_t jmp_false = codegen_emit_jump(cg, OP_JMP_IF_FALSE);
+        
+        for (int i = 0; i < stmt->then_count; i++) {
+            codegen_stmt(cg, stmt->then_stmts[i]);
+        }
+        
+        if (stmt->else_count > 0) {
+            size_t jmp_skip = codegen_emit_jump(cg, OP_JMP);
+            codegen_patch_jump(cg, jmp_false, cg->code_offset);
+            
+            for (int i = 0; i < stmt->else_count; i++) {
+                codegen_stmt(cg, stmt->else_stmts[i]);
+            }
+            codegen_patch_jump(cg, jmp_skip, cg->code_offset);
+        } else {
+            codegen_patch_jump(cg, jmp_false, cg->code_offset);
+        }
+        break;
+        
+    case STMT_WHILE:
+        size_t loop_start = cg->code_offset;
+        codegen_expr(cg, stmt->condition);
+        size_t jmp_out = codegen_emit_jump(cg, OP_JMP_IF_FALSE);
+        
+        for (int i = 0; i < stmt->body_count; i++) {
+            codegen_stmt(cg, stmt->body[i]);
+        }
+        
+        codegen_emit_jump_to(cg, OP_JMP, loop_start);
+        codegen_patch_jump(cg, jmp_out, cg->code_offset);
+        break;
+    }
+}
+
+Bytecode Emission Helpers:
+
+void codegen_emit_op(CodeGen* cg, OpCode op) {
+    if (cg->code_offset >= cg->code_capacity) {
+        cg->code = realloc(cg->code, cg->code_capacity * 2);
+        cg->code_capacity *= 2;
+    }
+    cg->code[cg->code_offset++] = (unsigned char)op;
+}
+
+void codegen_emit_arg(CodeGen* cg, int arg) {
+    // Emit 4-byte little-endian integer argument
+    codegen_emit_op(cg, (arg) & 0xFF);
+    codegen_emit_op(cg, (arg >> 8) & 0xFF);
+    codegen_emit_op(cg, (arg >> 16) & 0xFF);
+    codegen_emit_op(cg, (arg >> 24) & 0xFF);
+}
+
+size_t codegen_emit_jump(CodeGen* cg, OpCode jmp_op) {
+    // Emit jump instruction; return patch location
+    size_t patch_pos = cg->code_offset;
+    codegen_emit_op(cg, jmp_op);
+    codegen_emit_arg(cg, 0);  // Placeholder target
+    return patch_pos;
+}
+
+void codegen_patch_jump(CodeGen* cg, size_t patch_pos, size_t target) {
+    // Write actual jump target at patch location
+    unsigned int offset = (unsigned int)target;
+    cg->code[patch_pos + 1] = (offset) & 0xFF;
+    cg->code[patch_pos + 2] = (offset >> 8) & 0xFF;
+    cg->code[patch_pos + 3] = (offset >> 16) & 0xFF;
+    cg->code[patch_pos + 4] = (offset >> 24) & 0xFF;
+}
+
+VM Execution Loop Pattern:
+
+typedef struct VMFrame {
+    unsigned char* code;
+    size_t ip;              // Instruction pointer
+    VMValue* stack;
+    int sp;                 // Stack pointer
+    VMValue* locals;
+} VMFrame;
+
+VMValue vm_execute(VMFrame* frame) {
+    while (1) {
+        OpCode op = (OpCode)frame->code[frame->ip++];
+        
+        switch (op) {
+        case OP_PUSH_INT: {
+            int arg = *(int*)&frame->code[frame->ip];
+            frame->ip += 4;
+            vm_push(frame, vm_int(arg));
+            break;
+        }
+        
+        case OP_BINARY_ADD: {
+            VMValue right = vm_pop(frame);
+            VMValue left = vm_pop(frame);
+            VMValue result = vm_int(left.i + right.i);
+            vm_push(frame, result);
+            break;
+        }
+        
+        case OP_RETURN:
+            return vm_pop(frame);
+            
+        case OP_JMP_IF_FALSE: {
+            int target = *(int*)&frame->code[frame->ip];
+            frame->ip += 4;
+            VMValue cond = vm_pop(frame);
+            if (!vm_is_true(cond)) {
+                frame->ip = target;
+            }
+            break;
+        }
+        
+        // ... other opcodes
+        }
+    }
+}
+
+Key Points for Codegen Implementation:
+- AST walking is RECURSIVE: expressions emit code depth-first
+- Constants (strings, numbers) stored in pool; emit pool_id not raw value
+- Jump targets patched AFTER code generation (forward references)
+- Stack discipline: push operands left-to-right, operations consume in order
+- Local variables indexed by scope; globals looked up in symbol table
+- NO interpreter-style eval() calls; only bytecode emission
+- Proper LIFO handling: expressions must restore stack depth on exit

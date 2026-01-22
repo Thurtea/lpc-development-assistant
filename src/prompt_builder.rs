@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use crate::mud_index::MudReferenceIndex;
 
 pub struct PromptBuilder {
@@ -10,6 +10,79 @@ pub struct PromptBuilder {
 }
 
 impl PromptBuilder {
+    /// Generate specialized retrieval queries based on prompt type
+    fn generate_specialized_queries(query: &str) -> Vec<String> {
+        let query_lower = query.to_lowercase();
+        let mut queries = vec![query.to_string()];
+
+        let is_codegen = query_lower.contains("codegen") || query_lower.contains("compiler") ||
+            query_lower.contains("bytecode") || query_lower.contains("opcode");
+        let is_vm = query_lower.contains("vm") || query_lower.contains("virtual machine") ||
+            query_lower.contains("interpreter") || query_lower.contains("execute");
+        let is_struct = query_lower.contains("struct") || query_lower.contains("typedef") ||
+            query_lower.contains("data structure");
+        let is_object = query_lower.contains("object") || query_lower.contains("inherit") ||
+            query_lower.contains("call_other") || query_lower.contains("call method") ||
+            query_lower.contains("shadow");
+        let is_efun = query_lower.contains("efun") || query_lower.contains("call_out") ||
+            query_lower.contains("simul") || query_lower.contains("apply") ||
+            query_lower.contains("function_exists");
+
+        if is_codegen {
+            queries.extend(vec![
+                "LPC driver bytecode VM compilation".to_string(),
+                "MudOS vm.c opcode dispatch".to_string(),
+                "FluffOS interpret.c stack machine".to_string(),
+                "stack VM codegen AST visitor".to_string(),
+                "opcode emission C bytecode".to_string(),
+            ]);
+        }
+
+        if is_vm {
+            queries.extend(vec![
+                "stack-based virtual machine implementation".to_string(),
+                "LPC driver VM execution loop".to_string(),
+                "bytecode interpreter instruction dispatch".to_string(),
+                "call stack frame management".to_string(),
+            ]);
+        }
+
+        if is_struct {
+            queries.extend(vec![
+                "tagged union VMValue LPC".to_string(),
+                "OpCode enum C definition".to_string(),
+                "symbol table codegen".to_string(),
+            ]);
+        }
+
+        if is_object {
+            queries.extend(vec![
+                "LPC object inheritance chain resolution".to_string(),
+                "MudOS object.c call_other implementation".to_string(),
+                "FluffOS object.c CALL_METHOD opcode".to_string(),
+                "LPC object variables inherit offsets".to_string(),
+                "environment inventory traversal driver".to_string(),
+            ]);
+        }
+
+        if is_efun {
+            queries.extend(vec![
+                "LPC efun binding table".to_string(),
+                "FluffOS efun_defs.c call_other".to_string(),
+                "simul_efun dispatch master object".to_string(),
+                "call_out scheduler driver".to_string(),
+                "children() and living() driver code".to_string(),
+            ]);
+        }
+
+        // Always add general LPC driver context
+        if !query_lower.contains("driver") {
+            queries.push("LPC driver C implementation".to_string());
+        }
+
+        queries
+    }
+
     pub fn new(templates_dir: PathBuf) -> Result<Self, String> {
         let mut pb = PromptBuilder {
             templates_dir: templates_dir.clone(),
@@ -23,6 +96,8 @@ impl PromptBuilder {
             "mudlib_context.txt",
             "efuns_context.txt",
             "reference_sources.txt",
+            "driver_codegen.txt",
+            "object_system.txt",
         ];
 
         for name in &names {
@@ -49,12 +124,33 @@ impl PromptBuilder {
     }
 
     pub fn build_prompt(&self, user_query: &str, _model: &str, examples: Vec<String>) -> Result<String, String> {
-        // System header
+        // System header with enhanced role
         let mut out = String::new();
-        out.push_str("You are an LPC MUD development assistant.\n\n");
+        out.push_str("You are LPC Driver Architect. IMPLEMENT EXACTLY using provided headers and APIs.\n");
+        out.push_str("NO redefinitions. Emit bytecode only.\n");
+        out.push_str("Traverse AST recursively. Match MudOS/FluffOS patterns from context.\n\n");
 
-        // Core template: driver_context preferred
-        let driver = self.templates.get("driver_context.txt").map(|s| s.as_str()).unwrap_or("");
+        // Detect if this is a specialized query and load appropriate template
+        let query_lower = user_query.to_lowercase();
+        let is_codegen = query_lower.contains("codegen") || query_lower.contains("compiler") || 
+                        query_lower.contains("bytecode") || query_lower.contains("opcode");
+        let is_object = query_lower.contains("object") || query_lower.contains("inherit") ||
+                        query_lower.contains("call_other") || query_lower.contains("call method") ||
+                        query_lower.contains("shadow");
+        let is_efun = query_lower.contains("efun") || query_lower.contains("call_out") ||
+                      query_lower.contains("simul") || query_lower.contains("function_exists");
+        
+        let driver = if is_codegen {
+            self.templates.get("driver_codegen.txt")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.as_str())
+                .unwrap_or_else(|| self.templates.get("driver_context.txt").map(|s| s.as_str()).unwrap_or(""))
+        } else {
+            self.templates.get("driver_context.txt").map(|s| s.as_str()).unwrap_or("")
+        };
+
+        let object_system = self.templates.get("object_system.txt").map(|s| s.as_str()).unwrap_or("");
+        
         let mudlib = self.templates.get("mudlib_context.txt").map(|s| s.as_str()).unwrap_or("");
         let efuns = self.templates.get("efuns_context.txt").map(|s| s.as_str()).unwrap_or("");
         let refs = self.templates.get("reference_sources.txt").map(|s| s.as_str()).unwrap_or("");
@@ -62,17 +158,47 @@ impl PromptBuilder {
         out.push_str(driver);
         out.push_str("\n\n");
 
-        // Search for relevant documentation
+        if (is_object || is_efun) && !object_system.is_empty() {
+            out.push_str(object_system);
+            out.push_str("\n\n");
+        }
+
+        // Multi-pass retrieval: generate specialized queries
+        let all_queries = Self::generate_specialized_queries(user_query);
+        let mut all_results = Vec::new();
+        
         if let Some(ref index) = self.reference_index {
-            if let Ok(search_results) = index.search_with_scoring(user_query, 3) {
-                if !search_results.is_empty() {
-                    out.push_str("Relevant documentation:\n\n");
-                    for result in search_results {
-                        out.push_str(&format!("From: {}\n", result.path.display()));
-                        out.push_str(&format!("Relevance: {:.1}%\n", result.relevance_score * 100.0));
-                        out.push_str(&result.snippet);
-                        out.push_str("\n\n");
-                    }
+            // Collect results from all specialized queries
+            for query in &all_queries {
+                if let Ok(search_results) = index.search_with_scoring(query, 8) {
+                    all_results.extend(search_results);
+                }
+            }
+            
+            // Deduplicate and sort by relevance
+            let mut unique_results = HashMap::new();
+            for result in all_results {
+                let key = result.path.clone();
+                unique_results.entry(key)
+                    .and_modify(|r: &mut crate::mud_index::SearchResult| {
+                        if result.relevance_score > r.relevance_score {
+                            *r = result.clone();
+                        }
+                    })
+                    .or_insert(result);
+            }
+            
+            let mut sorted_results: Vec<_> = unique_results.into_values().collect();
+            sorted_results.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap_or(std::cmp::Ordering::Equal));
+            
+            // Include top 15 results (not just 5)
+            if !sorted_results.is_empty() {
+                out.push_str("CRITICAL REFERENCES (Top 15 chunks, prioritize MudOS/FluffOS patterns):\n\n");
+                for (idx, result) in sorted_results.iter().take(15).enumerate() {
+                    out.push_str(&format!("[{}] From: {}\n", idx + 1, result.path.display()));
+                    out.push_str(&format!("Match: {:.1}%\n", result.relevance_score * 100.0));
+                    out.push_str(&result.snippet);
+                    out.push_str("\n\n");
                 }
             }
         }
@@ -88,44 +214,57 @@ impl PromptBuilder {
         }
 
         // Add supporting templates
-        out.push_str(mudlib);
-        out.push_str("\n\n");
-        out.push_str(efuns);
-        out.push_str("\n\n");
-        out.push_str(refs);
-        out.push_str("\n\n");
+        if !mudlib.is_empty() {
+            out.push_str(mudlib);
+            out.push_str("\n\n");
+        }
+        if !efuns.is_empty() {
+            out.push_str(efuns);
+            out.push_str("\n\n");
+        }
+        if !refs.is_empty() {
+            out.push_str(refs);
+            out.push_str("\n\n");
+        }
 
-        // User query
+        // User query with clear instructions
         out.push_str("User Query: ");
         out.push_str(user_query);
-        out.push_str("\n\nProvide LPC code following the patterns shown above.");
+        out.push_str("\n\nInstructions:\n");
+        out.push_str("1. Use APIs from provided headers (codegen.h, vm.h) - never redefine\n");
+        out.push_str("2. Follow MudOS/FluffOS patterns from references\n");
+        out.push_str("3. For codegen: emit bytecode opcodes only, traverse AST recursively\n");
+        out.push_str("4. For object/efun tasks: use CALL_METHOD/OP_SUPER_CALL, respect master hooks, avoid redefinitions\n");
+        out.push_str("5. Return complete, compilable C code\n");
 
         // Trim to fit max tokens (8000 tokens ~= 32k chars)
         let max_tokens = 8000usize;
         let mut final_text = out.clone();
-        let mut tokens = Self::estimate_tokens(&final_text);
+        let tokens = Self::estimate_tokens(&final_text);
         if tokens > max_tokens {
             // Order of trimming: examples first, then supporting templates, keep driver + references + query
             let mut reduced = String::new();
-            reduced.push_str("You are an LPC MUD development assistant.\n\n");
+            reduced.push_str("You are LPC Driver Architect. Use provided APIs, no redefinitions.\n\n");
             reduced.push_str(driver);
             reduced.push_str("\n\n");
             
-            // Include top reference if available
+            // Include specialized references only
             if let Some(ref index) = self.reference_index {
-                if let Ok(search_results) = index.search_with_scoring(user_query, 1) {
+                if let Ok(search_results) = index.search_with_scoring(user_query, 5) {
                     if !search_results.is_empty() {
-                        let result = &search_results[0];
-                        reduced.push_str("Top reference:\n");
-                        reduced.push_str(&result.snippet);
-                        reduced.push_str("\n\n");
+                        reduced.push_str("Top references:\n");
+                        for (idx, result) in search_results.iter().take(5).enumerate() {
+                            reduced.push_str(&format!("[{}] {}\n", idx + 1, result.path.display()));
+                            reduced.push_str(&result.snippet);
+                            reduced.push_str("\n\n");
+                        }
                     }
                 }
             }
             
             reduced.push_str("User Query: ");
             reduced.push_str(user_query);
-            reduced.push_str("\n\nProvide LPC code following the patterns shown above.");
+            reduced.push_str("\n\nProvide complete C code following patterns shown above.");
 
             // If still too large, truncate final_text to char limit
             let mut final_chars = (max_tokens * 4) as usize;

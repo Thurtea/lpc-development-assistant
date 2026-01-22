@@ -131,6 +131,7 @@ impl MudReferenceIndex {
     }
 
     pub fn search_with_scoring(&self, query: &str, limit: usize) -> Result<Vec<SearchResult>> {
+        let query_lower = query.to_lowercase();
         let query_terms: Vec<&str> = query
             .split_whitespace()
             .filter(|w| w.len() > 2)
@@ -138,6 +139,7 @@ impl MudReferenceIndex {
 
         let mut candidates: Vec<(PathBuf, usize, f32)> = Vec::new();
 
+        // First pass: broader search across all code files
         for entry in walkdir::WalkDir::new(&self.corpus_root)
             .into_iter()
             .filter_map(Result::ok)
@@ -150,10 +152,36 @@ impl MudReferenceIndex {
 
             match std::fs::read_to_string(path) {
                 Ok(content) => {
+                    let path_lower = path.to_string_lossy().to_lowercase();
+                    let is_driver_source = path_lower.contains(".c") || path_lower.contains(".h") ||
+                        path_lower.contains("mudos") || path_lower.contains("fluffos") ||
+                        path_lower.contains("interpret") || path_lower.contains("codegen") ||
+                        path_lower.contains("compile") || path_lower.contains("vm");
+                    let is_object_related = path_lower.contains("object") || path_lower.contains("inherit") ||
+                        path_lower.contains("call_other") || path_lower.contains("callmethod") ||
+                        path_lower.contains("shadow");
+                    let is_efun_related = path_lower.contains("efun") || path_lower.contains("simul") ||
+                        path_lower.contains("callout") || path_lower.contains("apply");
+
                     for (line_idx, line) in content.lines().enumerate() {
-                        let score = Self::calculate_relevance(&query_terms, line);
-                        if score > 0.0 {
-                            candidates.push((path.to_path_buf(), line_idx, score));
+                        let base_score = Self::calculate_relevance(&query_terms, line);
+                        if base_score > 0.0 {
+                            let mut weighted_score = base_score;
+                            if is_driver_source {
+                                weighted_score += 0.15;
+                            }
+                            if is_object_related && query_lower.contains("object") {
+                                weighted_score += 0.2;
+                            }
+                            if is_efun_related && (query_lower.contains("efun") || query_lower.contains("call_out") || query_lower.contains("simul")) {
+                                weighted_score += 0.15;
+                            }
+                            if query_lower.contains("call_method") || query_lower.contains("call other") {
+                                if path_lower.contains("call") || path_lower.contains("method") {
+                                    weighted_score += 0.1;
+                                }
+                            }
+                            candidates.push((path.to_path_buf(), line_idx, weighted_score));
                         }
                     }
                 }
@@ -165,36 +193,63 @@ impl MudReferenceIndex {
 
         let mut results = Vec::new();
         let mut seen_files = HashSet::new();
+        
+        // Prioritize driver source files (.c, .h) from mud-references
+        let mut prioritized = Vec::new();
+        let mut other = Vec::new();
+        
+        for (path, line_idx, score) in candidates.iter().take(limit * 20) {
+            let path_str = path.to_string_lossy().to_lowercase();
+            let is_driver_source = path_str.contains(".c") || path_str.contains(".h") || 
+                                  path_str.contains("mudos") || path_str.contains("fluffos") || 
+                                  path_str.contains("interpret") || path_str.contains("codegen") ||
+                                  path_str.contains("compile") || path_str.contains("vm");
+            let is_object_related = query_lower.contains("object") && (path_str.contains("object") || path_str.contains("inherit") || path_str.contains("call_other"));
+            let is_efun_related = (query_lower.contains("efun") || query_lower.contains("call_out") || query_lower.contains("simul")) && path_str.contains("efun");
 
-        for (path, line_idx, score) in candidates.iter().take(limit * 3) {
-            if seen_files.contains(path) && results.len() >= limit {
-                continue;
+            if is_driver_source || is_object_related || is_efun_related {
+                prioritized.push((path, line_idx, score));
+            } else {
+                other.push((path, line_idx, score));
             }
-            seen_files.insert(path.clone());
+        }
+        
+        // Process prioritized (driver sources) first, then others
+        for items in vec![prioritized, other] {
+            for (path, line_idx, score) in items {
+                if seen_files.contains(path) && results.len() >= limit {
+                    continue;
+                }
+                seen_files.insert(path.clone());
 
-            if let Ok(content) = std::fs::read_to_string(path) {
-                let lines: Vec<&str> = content.lines().collect();
-                if *line_idx < lines.len() {
-                    let context_start = if *line_idx > 2 { *line_idx - 2 } else { 0 };
-                    let context_end = std::cmp::min(*line_idx + 3, lines.len());
-                    let snippet = lines[context_start..context_end].join("\n");
+                if let Ok(content) = std::fs::read_to_string(path) {
+                    let lines: Vec<&str> = content.lines().collect();
+                    if *line_idx < lines.len() {
+                        let context_start = line_idx.saturating_sub(6);
+                        let context_end = std::cmp::min(*line_idx + 7, lines.len());
+                        let snippet = lines[context_start..context_end].join("\n");
 
-                    results.push(SearchResult {
-                        path: path.clone(),
-                        line_number: *line_idx,
-                        snippet,
-                        relevance_score: *score,
-                        file_type: path
-                            .extension()
-                            .and_then(|e| e.to_str())
-                            .unwrap_or("unknown")
-                            .to_string(),
-                    });
+                        results.push(SearchResult {
+                            path: path.clone(),
+                            line_number: *line_idx,
+                            snippet,
+                            relevance_score: *score,
+                            file_type: path
+                                .extension()
+                                .and_then(|e| e.to_str())
+                                .unwrap_or("unknown")
+                                .to_string(),
+                        });
 
-                    if results.len() >= limit {
-                        break;
+                        if results.len() >= limit {
+                            break;
+                        }
                     }
                 }
+            }
+            
+            if results.len() >= limit {
+                break;
             }
         }
 
@@ -224,7 +279,7 @@ impl MudReferenceIndex {
 
     fn is_code_file(path: &Path) -> bool {
         match path.extension().and_then(|s| s.to_str()) {
-            Some("c") | Some("h") | Some("lpc") | Some("y") | Some("txt") | Some("md") => true,
+            Some("c") | Some("h") | Some("lpc") | Some("y") | Some("txt") | Some("md") | Some("json") | Some("jsonl") => true,
             _ => false,
         }
     }
@@ -261,13 +316,15 @@ mod tests {
         assert!(MudReferenceIndex::is_code_file(Path::new("test.lpc")));
         assert!(MudReferenceIndex::is_code_file(Path::new("test.y")));
         assert!(MudReferenceIndex::is_code_file(Path::new("test.txt")));
+        assert!(MudReferenceIndex::is_code_file(Path::new("efuns.json")));
+        assert!(MudReferenceIndex::is_code_file(Path::new("efuns.jsonl")));
     }
 
     #[test]
     fn test_is_code_file_invalid() {
         assert!(!MudReferenceIndex::is_code_file(Path::new("test.rs")));
-        assert!(!MudReferenceIndex::is_code_file(Path::new("test.json")));
         assert!(!MudReferenceIndex::is_code_file(Path::new("test")));
+        assert!(!MudReferenceIndex::is_code_file(Path::new("image.png")));
     }
 
     #[test]

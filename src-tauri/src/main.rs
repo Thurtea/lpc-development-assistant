@@ -267,9 +267,10 @@ fn save_response(filename: String, contents: String, state: tauri::State<'_, App
 }
 
 #[tauri::command]
-fn search_references(query: String, state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+fn search_references(query: String, limit: Option<usize>, state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
     let guard = state.index.read().map_err(|e| e.to_string())?;
-    match guard.search_with_scoring(&query, 5) {
+    let max_hits = limit.unwrap_or(15);
+    match guard.search_with_scoring(&query, max_hits) {
         Ok(results) => {
             let json_results = results
                 .into_iter()
