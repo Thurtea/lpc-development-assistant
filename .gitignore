@@ -25,19 +25,7 @@ mud-references/*.tar.gz
 .setup_complete
 
 # Documentation (keep only essential)
-PHASE*.md
-PROJECT_STATUS_REPORT.md
-project-report-*.md
-summary-*.md
-WORK_COMPLETION_SUMMARY.md
-PHASE*_IMPLEMENTATION_COMPLETE.md
-PHASE*_SESSION_CHANGES_LOG.md
-ICED_GUI_STATUS.md
-VISUAL_REFERENCE_GUIDE.md
-RAG_CODE_REFERENCE.md
-RAG_QUICK_REFERENCE.md
-audit-results/
-docs/audits/
+session-notes/
 
 # Old/Backup
 icons/old_icons/

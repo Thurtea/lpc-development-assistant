@@ -737,15 +737,29 @@
         const status = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('get_setup_status');
         
         if (!status.ollama_installed) {
-          const proceed = confirm(
+          const startOllama = confirm(
             'Ollama not detected!\n\n' +
             'LPC Dev Assistant requires Ollama to be installed and running.\n\n' +
-            'Please install Ollama from https://ollama.ai and start it.\n\n' +
-            'Click OK to continue anyway, or Cancel to exit.'
+            'Would you like to start Ollama now?\n\n' +
+            'Click OK to start "ollama serve", or Cancel to continue without it.'
           );
-          if (!proceed) {
-            window.close();
-            return;
+          if (startOllama) {
+            try {
+              await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('start_ollama');
+              toast('Starting Ollama... Please wait a few seconds.');
+              // Wait 3 seconds for Ollama to start
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            } catch (e) {
+              const proceed = confirm(
+                'Failed to start Ollama automatically: ' + e + '\n\n' +
+                'Please start Ollama manually by running "ollama serve" in a terminal.\n\n' +
+                'Click OK to continue anyway.'
+              );
+              if (!proceed) {
+                window.close();
+                return;
+              }
+            }
           }
         }
         

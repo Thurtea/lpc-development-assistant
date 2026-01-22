@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}};
+use std::process::Command;
 
 use tauri::{Window, Manager, AppHandle};
 use tauri::Emitter;
@@ -218,6 +219,27 @@ fn check_ollama_health() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
+fn start_ollama() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(&["/C", "start", "cmd", "/K", "ollama", "serve"])
+            .spawn()
+            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        Ok("Ollama started in new terminal".to_string())
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new("sh")
+            .args(&["-c", "ollama serve &"])
+            .spawn()
+            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        Ok("Ollama started in background".to_string())
+    }
+}
+
+#[tauri::command]
 fn analyze_driver(path: String) -> Result<serde_json::Value, String> {
     lpc_dev_assistant::driver_analyzer::efuns_json(&path)
         .and_then(|v| serde_json::to_value(&v).map_err(|e| e.to_string()))
@@ -354,6 +376,7 @@ fn main() {
             ask_ollama,
             ask_ollama_stream,
             check_ollama_health,
+            start_ollama,
             analyze_driver,
             list_models,
             get_available_models,
