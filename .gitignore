@@ -1,5 +1,7 @@
 # Rust
 target/
+!target/release/bundle/msi/*.msi
+!target/release/bundle/nsis/*.exe
 Cargo.lock
 
 # Node/Vite (if tauri ui)
