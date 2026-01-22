@@ -60,6 +60,20 @@
         "type": "embedBootstrapper"
       },
       "allowDowngrades": true
+    },
+    "linux": {
+      "deb": {
+        "depends": [],
+        "desktopTemplate": null
+      },
+      "appimage": {}
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null
     }
   }
 }

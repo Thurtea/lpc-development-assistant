@@ -32,8 +32,25 @@ Download the installer from the [latest release](https://github.com/Thurtea/lpc-
 3. Build the search index
 4. Launch the app
 
-### macOS and Linux
-Coming soon. For now, build from source.
+### macOS
+Download the `.dmg` file from [releases](https://github.com/Thurtea/lpc-development-assistant/releases) and drag the app to Applications.
+
+Supports both Intel (x86_64) and Apple Silicon (aarch64).
+
+### Linux
+Download the `.AppImage` or `.deb` file from [releases](https://github.com/Thurtea/lpc-development-assistant/releases).
+
+**AppImage:** Make executable and run
+```bash
+chmod +x LPC_Dev_Assistant_*.AppImage
+./LPC_Dev_Assistant_*.AppImage
+```
+
+**Debian/Ubuntu:**
+```bash
+sudo apt install ./lpc-dev-assistant_*.deb
+lpc-dev-assistant
+```
 
 ## Building from Source
 
@@ -54,22 +71,75 @@ ollama serve
 ollama pull qwen2.5-coder:7b
 ```
 
-### 4. Build the app
+### 4. Install Rust toolchain
+If you haven't already:
 ```bash
-# Windows
-cargo tauri build --bundles nsis
-
-# macOS
-cargo tauri build --bundles dmg
-
-# Linux
-cargo tauri build --bundles appimage
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Or run in development mode:
+### 5. Add build targets (for cross-compilation)
+
+**For Windows builds:**
+```bash
+rustup target add x86_64-pc-windows-msvc
+```
+
+**For Linux builds:**
+```bash
+rustup target add x86_64-unknown-linux-gnu
+# Or use cross-compilation tool:
+cargo install cross
+```
+
+**For macOS builds (on macOS only):**
+```bash
+rustup target add x86_64-apple-darwin
+rustup target add aarch64-apple-darwin
+```
+
+### 6. Build the app
+
+**Single platform:**
+```bash
+# Windows
+cargo tauri build
+
+# macOS
+cargo tauri build
+
+# Linux
+cargo tauri build
+```
+
+**All platforms (from Windows with cross-tools):**
+```powershell
+# Using provided build script (requires cross tools installed)
+.\build-all-platforms.ps1 -Platform all
+```
+
+**Development mode:**
 ```bash
 cargo tauri dev
 ```
+
+### Cross-Compilation Notes
+
+**Building for Linux on Windows:**
+- Easiest: Use Windows Subsystem for Linux (WSL2) with Linux environment
+- Alternative: Install `cross` tool: `cargo install cross`
+- Then: `cross tauri build --target x86_64-unknown-linux-gnu`
+
+**Building for macOS:**
+- Best option: Build natively on macOS
+- macOS to Linux is possible with cross-compilation tools
+- Windows to macOS cross-compilation is complex and not recommended
+
+**Linux to Windows:**
+- Use `mingw-w64` toolchain
+- Install target: `rustup target add x86_64-pc-windows-gnu`
+- Build: `cargo tauri build --target x86_64-pc-windows-gnu`
+
+See [Rust Platform Support](https://doc.rust-lang.org/nightly/rustc/platform-support.html) for detailed cross-compilation guidance.
 
 ## Configuration
 
