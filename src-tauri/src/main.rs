@@ -11,6 +11,12 @@ use tauri::Emitter;
 
 use lpc_dev_assistant::{OllamaClient, ContextManager, PromptBuilder, MudReferenceIndex};
 
+mod wsl;
+mod driver;
+
+use driver::pipeline::{CompileResult, DriverPipeline};
+use wsl::PathMapper;
+
 #[derive(Clone)]
 pub struct AppState {
     pub workspace_root: PathBuf,
@@ -18,6 +24,7 @@ pub struct AppState {
     pub index: Arc<RwLock<MudReferenceIndex>>,
     pub cancel_flag: Arc<AtomicBool>,
     pub first_run: Arc<AtomicBool>,
+    pub path_mapper: Arc<PathMapper>,
 }
 
 #[tauri::command]
@@ -199,9 +206,35 @@ fn list_models() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
+async fn check_ollama_available() -> Result<bool, String> {
+    let client = OllamaClient::new().map_err(|e| e.to_string())?;
+    Ok(client.list_models().await.is_ok())
+}
+
+#[tauri::command]
 async fn get_available_models() -> Result<Vec<String>, String> {
     let client = OllamaClient::new().map_err(|e| e.to_string())?;
     client.list_models().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn start_ollama_service() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        tokio::process::Command::new("cmd")
+            .args(&["/C", "start", "", "ollama", "serve"])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(true)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        tokio::process::Command::new("sh")
+            .args(&["-c", "ollama serve &"])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(true)
+    }
 }
 
 #[tauri::command]
@@ -318,7 +351,46 @@ fn save_response(filename: String, contents: String, state: tauri::State<'_, App
 }
 
 #[tauri::command]
-fn search_references(query: String, limit: Option<usize>, state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+async fn compile_lpc(file_path: String, state: tauri::State<'_, AppState>) -> Result<CompileResult, String> {
+    let pipeline = DriverPipeline::new(state.path_mapper.clone());
+    pipeline
+        .compile(&file_path, |_ev| {})
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn build_driver_ui(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let pipeline = DriverPipeline::new(state.path_mapper.clone());
+    let result = pipeline
+        .build_ui(|_ev| {})
+        .await
+        .map_err(|e| e.to_string())?;
+    if result.success {
+        Ok("build-ui completed".to_string())
+    } else {
+        Err(format!("build-ui failed (code {:?}): {:?}", result.exit_code, result.stderr))
+    }
+}
+
+#[tauri::command]async fn test_driver_connection(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let pipeline = DriverPipeline::new(state.path_mapper.clone());
+    
+    // Test: Run driver help command to verify WSL connectivity
+    let result = pipeline.executor.execute("./amlp-driver --help")
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    if result.exit_code == Some(0) {
+        let output = result.stdout.join("\n");
+        Ok(format!("✅ Driver connected!\n\n{}", output))
+    } else {
+        let errors = result.stderr.join("\n");
+        Err(format!("❌ Driver error (code {:?}):\n{}", result.exit_code, errors))
+    }
+}
+
+#[tauri::command]fn search_references(query: String, limit: Option<usize>, state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
     let guard = state.index.read().map_err(|e| e.to_string())?;
     let max_hits = limit.unwrap_or(15);
     match guard.search_with_scoring(&query, max_hits) {
@@ -390,12 +462,19 @@ fn main() {
         eprintln!("Skipping index build (corpus missing)");
     }
 
+    let path_mapper = PathMapper::new(
+        cwd.clone(),
+        "/home/thurtea/amlp-driver".to_string(),
+        "/home/thurtea/amlp-library".to_string(),
+    );
+
     let state = AppState {
         workspace_root: cwd.clone(),
         prompt_builder: Arc::new(pb),
         index: Arc::new(RwLock::new(mud_index)),
         cancel_flag: Arc::new(AtomicBool::new(false)),
         first_run: Arc::new(AtomicBool::new(first_run_flag)),
+        path_mapper: Arc::new(path_mapper),
     };
 
     eprintln!("Building Tauri app...");
@@ -409,6 +488,8 @@ fn main() {
             analyze_driver,
             list_models,
             get_available_models,
+            check_ollama_available,
+            start_ollama_service,
             stop_generation,
             list_contexts,
             extract_references,
@@ -417,7 +498,10 @@ fn main() {
             save_response,
             get_setup_status,
             run_initial_setup,
-            mark_setup_complete
+            mark_setup_complete,
+            compile_lpc,
+            build_driver_ui,
+            test_driver_connection
         ])
         .setup(|app| {
             let app_handle = app.handle();

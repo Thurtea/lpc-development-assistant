@@ -266,6 +266,75 @@
     @media (max-width: 1100px) {
       .grid { grid-template-columns: 1fr; }
     }
+
+    /* Tab styling */
+    .tabs-header {
+      display: flex;
+      gap: 8px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15,20,26,0.95);
+      overflow-x: auto;
+      scroll-behavior: smooth;
+    }
+
+    .tab-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--muted);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border: none;
+      color: #0b1016;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 18px 24px;
+      min-height: 500px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .tab-content .card {
+      margin-bottom: 18px;
+    }
+
+    .action-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border: none;
+      color: #0b1016;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
   </style>
 </head>
 <body>
@@ -283,8 +352,15 @@
     </div>
   </header>
 
-  <div class="grid">
-    <div class="card">
+  <div class="tabs-header">
+    <button class="tab-btn active" data-tab="assistant">Assistant</button>
+    <button class="tab-btn" data-tab="driver">Driver</button>
+  </div>
+
+  <!-- Assistant Tab (Main content) -->
+  <div id="assistant" class="tab-content active">
+    <div class="grid">
+      <div class="card">
       <div class="section-title">
         <span>Prompt</span>
         <div class="toolbar">
@@ -383,7 +459,41 @@
       <div class="section-title" style="margin-top:14px;">Status</div>
       <div id="status-bar" class="status">Ready.</div>
     </div>
+    </div>
   </div>
+  <!-- End Assistant Tab -->
+
+  <!-- Driver Tab -->
+  <div id="driver" class="tab-content">
+    <div class="card">
+      <h3 style="margin-top: 0;">AMLP Driver Integration</h3>
+      <p style="color: var(--muted); font-size: 14px;">Test WSL command execution and LPC file compilation.</p>
+    </div>
+
+    <div class="card">
+      <h3>Connection Test</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Verify that the driver is accessible via WSL</p>
+      <button id="test-connection-btn" class="action-btn">Test Driver Connection</button>
+      <pre id="connection-status" style="margin-top: 10px; padding: 10px; background: var(--code); border-radius: 4px; border: 1px solid var(--border); max-height: 200px; overflow-y: auto; color: var(--muted); font-size: 12px;">Ready to test...</pre>
+    </div>
+
+    <div class="card">
+      <h3>Compile LPC File</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Compile an LPC file using the amlp-driver</p>
+      <label style="display: block; margin-bottom: 6px; color: var(--text); font-weight: 600;">File Path (WSL):</label>
+      <input type="text" id="lpc-file-path" placeholder="/home/thurtea/amlp-library/master.c" style="width: 100%; margin-bottom: 12px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+      <button id="compile-btn" class="action-btn">Compile File</button>
+      <pre id="compile-output" style="margin-top: 10px; padding: 10px; background: var(--code); border-radius: 4px; border: 1px solid var(--border); max-height: 300px; overflow-y: auto; color: var(--muted); font-size: 12px;">Ready to compile...</pre>
+    </div>
+
+    <div class="card">
+      <h3>Build Driver UI</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Run the styled terminal UI build system</p>
+      <button id="build-ui-btn" class="action-btn">Run make build-ui</button>
+      <pre id="build-output" style="margin-top: 10px; padding: 10px; background: var(--code); border-radius: 4px; border: 1px solid var(--border); max-height: 400px; overflow-y: auto; color: var(--muted); font-size: 12px;">Ready to build...</pre>
+    </div>
+  </div>
+  <!-- End Driver Tab -->
 
   <div id="toast" class="toast"></div>
 
@@ -729,10 +839,33 @@
       
       // Check setup status on startup
       await checkSetup();
+      await checkAndStartOllama();
       
       await loadModels();
       setStatus('Ready', 'success');
     });
+
+    async function checkAndStartOllama() {
+      try {
+        const available = await window.__TAURI__.invoke('check_ollama_available');
+        if (!available) {
+          const start = confirm('Ollama is not running. Would you like to start it?');
+          if (start) {
+            await window.__TAURI__.invoke('start_ollama_service');
+            await new Promise(r => setTimeout(r, 3000));
+            const nowAvailable = await window.__TAURI__.invoke('check_ollama_available');
+            if (nowAvailable) {
+              alert('Ollama started successfully!');
+              location.reload();
+            } else {
+              alert('Failed to start Ollama. Please start it manually.');
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Ollama availability check failed', e);
+      }
+    }
 
     async function checkSetup() {
       try {
@@ -803,6 +936,89 @@
         console.warn('Setup check failed', e);
       }
     }
+
+    // Tab switching
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      // Show selected tab
+      const tabEl = document.getElementById(tabName);
+      if (tabEl) tabEl.classList.add('active');
+      
+      // Mark button as active
+      const btnEl = document.querySelector(`[data-tab="${tabName}"]`);
+      if (btnEl) btnEl.classList.add('active');
+    }
+
+    // Tab button click handlers
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.getAttribute('data-tab');
+        if (tabName) switchTab(tabName);
+      });
+    });
+
+    // Driver tab event handlers
+    document.getElementById('test-connection-btn')?.addEventListener('click', async () => {
+      const statusEl = document.getElementById('connection-status');
+      statusEl.textContent = 'Testing connection...';
+      statusEl.style.color = 'var(--muted)';
+      try {
+        const result = await window.__TAURI_INVOKE__('test_driver_connection');
+        statusEl.textContent = result;
+        statusEl.style.color = '#4ade80';
+      } catch (error) {
+        statusEl.textContent = `Error: ${error}`;
+        statusEl.style.color = '#ef4444';
+      }
+    });
+
+    document.getElementById('compile-btn')?.addEventListener('click', async () => {
+      const outputEl = document.getElementById('compile-output');
+      const filePath = document.getElementById('lpc-file-path').value.trim();
+      
+      if (!filePath) {
+        outputEl.textContent = 'Please enter a file path';
+        outputEl.style.color = '#ef4444';
+        return;
+      }
+      
+      outputEl.textContent = 'Compiling...';
+      outputEl.style.color = 'var(--muted)';
+      try {
+        const result = await window.__TAURI_INVOKE__('compile_lpc', { file_path: filePath });
+        const stdout = (result.stdout || []).join('\n');
+        const stderr = (result.stderr || []).join('\n');
+        const output = stdout || stderr || '(no output)';
+        
+        if (result.success) {
+          outputEl.textContent = `✅ Success! (exit code ${result.exit_code})\n\n${output}`;
+          outputEl.style.color = '#4ade80';
+        } else {
+          outputEl.textContent = `❌ Compilation failed (exit code ${result.exit_code})\n\n${output}`;
+          outputEl.style.color = '#ef4444';
+        }
+      } catch (error) {
+        outputEl.textContent = `Error: ${error}`;
+        outputEl.style.color = '#ef4444';
+      }
+    });
+
+    document.getElementById('build-ui-btn')?.addEventListener('click', async () => {
+      const outputEl = document.getElementById('build-output');
+      outputEl.textContent = 'Building...';
+      outputEl.style.color = 'var(--muted)';
+      try {
+        const result = await window.__TAURI_INVOKE__('build_driver_ui');
+        outputEl.textContent = result;
+        outputEl.style.color = '#4ade80';
+      } catch (error) {
+        outputEl.textContent = `Error: ${error}`;
+        outputEl.style.color = '#ef4444';
+      }
+    });
   </script>
 </body>
 </html>
