@@ -1,4 +1,19 @@
+# Override GitHub language detection - This is a Rust/Tauri project
+# Mark all generated/vendored C files so they don't count toward language stats
+
 gen/**/*.c linguist-vendored
 lpc-dev-assistant/**/*.c linguist-generated
+mud-references/** linguist-vendored
+release-v1.2.0/** linguist-vendored
+
+# Force Rust detection
 *.rs linguist-language=Rust
 Cargo.toml linguist-language=Rust
+Cargo.lock linguist-language=Rust
+src-tauri/** linguist-language=Rust
+
+# Mark LPC files properly
+*.lpc linguist-language=LPC
+
+# Documentation
+*.md linguist-documentation
