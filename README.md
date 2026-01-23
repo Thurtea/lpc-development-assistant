@@ -12,7 +12,6 @@ A cross-platform desktop application for LPC development, powered by Rust and Ol
 - Adjustable generation parameters (temperature, top-p, top-k, prediction length)
 - Built-in LPC reference corpus and search
 - First-run setup with automatic Ollama detection
-- Light/dark theme toggle
 
 ## Prerequisites
 

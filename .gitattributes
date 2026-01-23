@@ -1,0 +1,4 @@
+gen/**/*.c linguist-vendored
+lpc-dev-assistant/**/*.c linguist-generated
+*.rs linguist-language=Rust
+Cargo.toml linguist-language=Rust
