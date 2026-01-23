@@ -1,10 +1,7 @@
-use std::path::Path;
-use std::sync::Arc;
-
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-
-use crate::wsl::{run_wsl_command, CommandEvent, CommandOutput, PathMapper, WslExecutor};
+use std::sync::Arc;
+use crate::wsl::{command_executor::WslExecutor, PathMapper};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompileResult {
@@ -21,90 +18,109 @@ pub struct DriverPipeline {
 
 impl DriverPipeline {
     pub fn new(paths: Arc<PathMapper>) -> Self {
-        let workdir = paths.wsl_driver_root().to_string();
-        Self {
-            executor: WslExecutor::new(Some(workdir)),
+        DriverPipeline {
+            executor: WslExecutor::new(paths.wsl_driver_root().to_string()),
             paths,
         }
     }
 
-    pub async fn compile(
-        &self,
-        file_path: &str,
-        mut on_event: impl FnMut(CommandEvent),
-    ) -> Result<CompileResult> {
-        let wsl_path = self
-            .paths
-            .to_wsl_library(Path::new(file_path))
-            .or_else(|| self.paths.to_wsl_driver(Path::new(file_path)))
-            .ok_or_else(|| anyhow!("could not map file path to WSL"))?;
-        let cmd = format!("./amlp-driver compile {}", shell_escape(&wsl_path));
-        self.run(cmd, self.paths.wsl_driver_root(), on_event).await
-    }
+    pub async fn compile(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
+        let safe_path = self.validate_and_escape_path(file_path)?;
+        let command = format!("./build/driver compile {}", safe_path);
 
-    pub async fn ast(&self, file_path: &str, mut on_event: impl FnMut(CommandEvent)) -> Result<CompileResult> {
-        let wsl_path = self
-            .paths
-            .to_wsl_library(Path::new(file_path))
-            .or_else(|| self.paths.to_wsl_driver(Path::new(file_path)))
-            .ok_or_else(|| anyhow!("could not map file path to WSL"))?;
-        let cmd = format!("./amlp-driver ast {}", shell_escape(&wsl_path));
-        self.run(cmd, self.paths.wsl_driver_root(), on_event).await
-    }
-
-    pub async fn bytecode(
-        &self,
-        file_path: &str,
-        mut on_event: impl FnMut(CommandEvent),
-    ) -> Result<CompileResult> {
-        let wsl_path = self
-            .paths
-            .to_wsl_library(Path::new(file_path))
-            .or_else(|| self.paths.to_wsl_driver(Path::new(file_path)))
-            .ok_or_else(|| anyhow!("could not map file path to WSL"))?;
-        let cmd = format!("./amlp-driver bytecode {}", shell_escape(&wsl_path));
-        self.run(cmd, self.paths.wsl_driver_root(), on_event).await
-    }
-
-    pub async fn build_ui(&self, mut on_event: impl FnMut(CommandEvent)) -> Result<CompileResult> {
-        self.run("make build-ui".to_string(), self.paths.wsl_driver_root(), on_event)
-            .await
-    }
-
-    pub async fn test(&self, mut on_event: impl FnMut(CommandEvent)) -> Result<CompileResult> {
-        self.run("make test".to_string(), self.paths.wsl_driver_root(), on_event)
-            .await
-    }
-
-    async fn run(
-        &self,
-        command: String,
-        workdir: &str,
-        mut on_event: impl FnMut(CommandEvent),
-    ) -> Result<CompileResult> {
-        let out: CommandOutput = run_wsl_command(&command, Some(workdir), |ev| on_event(ev)).await?;
-        let success = out.exit_code.unwrap_or(1) == 0;
+        let output = self.executor.execute(&command).await?;
         Ok(CompileResult {
-            success,
-            exit_code: out.exit_code,
-            stdout: out.stdout,
-            stderr: out.stderr,
+            success: output.success,
+            exit_code: output.exit_code,
+            stdout: output.stdout,
+            stderr: output.stderr,
         })
+    }
+
+    pub async fn ast(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
+        let safe_path = self.validate_and_escape_path(file_path)?;
+        let command = format!("./build/driver ast {}", safe_path);
+
+        let output = self.executor.execute(&command).await?;
+        Ok(CompileResult {
+            success: output.success,
+            exit_code: output.exit_code,
+            stdout: output.stdout,
+            stderr: output.stderr,
+        })
+    }
+
+    pub async fn bytecode(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
+        let safe_path = self.validate_and_escape_path(file_path)?;
+        let command = format!("./build/driver bytecode {}", safe_path);
+
+        let output = self.executor.execute(&command).await?;
+        Ok(CompileResult {
+            success: output.success,
+            exit_code: output.exit_code,
+            stdout: output.stdout,
+            stderr: output.stderr,
+        })
+    }
+
+    pub async fn build_ui(&self, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
+        let command = "make build-ui".to_string();
+
+        let output = self.executor.execute(&command).await?;
+        Ok(CompileResult {
+            success: output.success,
+            exit_code: output.exit_code,
+            stdout: output.stdout,
+            stderr: output.stderr,
+        })
+    }
+
+    pub async fn test(&self, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
+        let command = "make test".to_string();
+
+        let output = self.executor.execute(&command).await?;
+        Ok(CompileResult {
+            success: output.success,
+            exit_code: output.exit_code,
+            stdout: output.stdout,
+            stderr: output.stderr,
+        })
+    }
+
+    fn validate_and_escape_path(&self, path: &str) -> Result<String> {
+        if path.starts_with('/') {
+            return Ok(shell_escape(path));
+        }
+
+        let windows_path = std::path::PathBuf::from(path);
+        let wsl_path = self.paths
+            .to_wsl_driver(&windows_path)
+            .or_else(|| self.paths.to_wsl_library(&windows_path))
+            .ok_or_else(|| anyhow::anyhow!("Path '{}' is not within driver or library roots", path))?;
+
+        Ok(shell_escape(&wsl_path))
     }
 }
 
 fn shell_escape(input: &str) -> String {
-    if input.chars().all(|c| c.is_ascii_alphanumeric() || c == '/' || c == '_' || c == '.' || c == '-') {
-        return input.to_string();
+    if input.contains(' ') || input.contains('\'') || input.contains('"')
+        || input.contains('$') || input.contains('`') || input.contains('\\') {
+        format!("'{}'", input.replace('\'', "'\\''"))
+    } else {
+        input.to_string()
     }
-    let mut out = String::from("'");
-    for ch in input.chars() {
-        if ch == '\'' {
-            out.push_str("'\"'\"'");
-        } else {
-            out.push(ch);
-        }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shell_escape() {
+        assert_eq!(shell_escape("simple.c"), "simple.c");
+        assert_eq!(shell_escape("file with spaces.c"), "'file with spaces.c'");
+        assert_eq!(shell_escape("file's.c"), "'file'\\''s.c'");
+        assert_eq!(shell_escape("$(evil).c"), "'$(evil).c'");
+        assert_eq!(shell_escape("`evil`.c"), "'`evil`.c'");
     }
-    out.push('\'');
-    out
 }

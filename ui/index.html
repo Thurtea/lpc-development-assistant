@@ -987,17 +987,19 @@
       
       outputEl.textContent = 'Compiling...';
       outputEl.style.color = 'var(--muted)';
+      
       try {
         const result = await window.__TAURI_INVOKE__('compile_lpc', { file_path: filePath });
-        const stdout = (result.stdout || []).join('\n');
-        const stderr = (result.stderr || []).join('\n');
-        const output = stdout || stderr || '(no output)';
+        
+        const stdoutText = (result.stdout || []).join('\n');
+        const stderrText = (result.stderr || []).join('\n');
+        const output = stdoutText || stderrText || '(no output)';
         
         if (result.success) {
-          outputEl.textContent = `✅ Success! (exit code ${result.exit_code})\n\n${output}`;
+          outputEl.textContent = `Compilation successful (exit code ${result.exit_code || 0})\n\n${output}`;
           outputEl.style.color = '#4ade80';
         } else {
-          outputEl.textContent = `❌ Compilation failed (exit code ${result.exit_code})\n\n${output}`;
+          outputEl.textContent = `Compilation failed (exit code ${result.exit_code || 'unknown'})\n\n${output}`;
           outputEl.style.color = '#ef4444';
         }
       } catch (error) {

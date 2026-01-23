@@ -351,10 +351,13 @@ fn save_response(filename: String, contents: String, state: tauri::State<'_, App
 }
 
 #[tauri::command]
-async fn compile_lpc(file_path: String, state: tauri::State<'_, AppState>) -> Result<CompileResult, String> {
+async fn compile_lpc(
+    file_path: String,
+    state: tauri::State<'_, AppState>
+) -> Result<CompileResult, String> {
     let pipeline = DriverPipeline::new(state.path_mapper.clone());
-    pipeline
-        .compile(&file_path, |_ev| {})
+
+    pipeline.compile(&file_path, |_| {})
         .await
         .map_err(|e| e.to_string())
 }
@@ -373,20 +376,38 @@ async fn build_driver_ui(state: tauri::State<'_, AppState>) -> Result<String, St
     }
 }
 
-#[tauri::command]async fn test_driver_connection(state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let pipeline = DriverPipeline::new(state.path_mapper.clone());
-    
-    // Test: Run driver help command to verify WSL connectivity
-    let result = pipeline.executor.execute("./amlp-driver --help")
-        .await
-        .map_err(|e| e.to_string())?;
-    
-    if result.exit_code == Some(0) {
-        let output = result.stdout.join("\n");
-        Ok(format!("✅ Driver connected!\n\n{}", output))
-    } else {
-        let errors = result.stderr.join("\n");
-        Err(format!("❌ Driver error (code {:?}):\n{}", result.exit_code, errors))
+#[tauri::command]
+async fn test_driver_connection(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let executor = crate::wsl::command_executor::WslExecutor::new(
+        state.path_mapper.wsl_driver_root().to_string()
+    );
+
+    let wsl_check = tokio::process::Command::new("wsl.exe")
+        .args(["--status"])
+        .output()
+        .await;
+
+    if wsl_check.is_err() {
+        return Err("WSL is not installed or not accessible. Please install WSL and try again.".to_string());
+    }
+
+    match executor.execute("pwd && ls -la ./build/driver 2>&1").await {
+        Ok(result) => {
+            let output = format!("{}\n{}", result.stdout.join("\n"), result.stderr.join("\n"));
+
+            if result.stdout.iter().any(|line| line.contains("driver")) {
+                Ok(format!("Driver found.\n\nWorking directory: {}\n\nDriver file details:\n{}",
+                    state.path_mapper.wsl_driver_root(),
+                    output
+                ))
+            } else {
+                Err(format!("Driver binary not found at ./build/driver\n\nWorking directory: {}\n\nDirectory contents:\n{}",
+                    state.path_mapper.wsl_driver_root(),
+                    output
+                ))
+            }
+        }
+        Err(e) => Err(format!("WSL connection failed: {}", e))
     }
 }
 
