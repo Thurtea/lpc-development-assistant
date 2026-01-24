@@ -2,7 +2,7 @@
 
 **Release Date:** January 22, 2026
 
-## 🎉 What's New
+## What's New
 
 ### Ollama Auto-Start Feature
 - App now prompts to start Ollama automatically on Windows if not running
@@ -11,16 +11,16 @@
 - Graceful fallback if auto-start fails
 
 ### Multi-Platform Build Support
-- ✅ Windows: MSI and NSIS installers
-- ⚙️ Linux: DEB and AppImage support (build configuration ready)
-- ⚙️ macOS: DMG and APP bundle support (build configuration ready)
+- Windows: MSI and NSIS installers
+- Linux: DEB and AppImage support (build configuration ready)
+- macOS: DMG and APP bundle support (build configuration ready)
 
 ### Documentation Organization
 - Session documentation moved to `session-notes/` folder
 - Cleaner repository structure
 - Added comprehensive release process documentation
 
-## 📦 Installation
+## Installation
 
 ### Windows
 **Download one of the installers:**
@@ -38,13 +38,13 @@ git checkout v1.2.0
 cargo tauri build
 ```
 
-## 🔧 Requirements
+## Requirements
 
 - **Windows:** 10 or later (64-bit)
 - **Ollama:** Required for LLM functionality ([ollama.ai](https://ollama.ai))
 - **Recommended Model:** `qwen2.5-coder:7b` or similar
 
-## ✨ Features
+## Features
 
 - Desktop GUI with real-time streaming responses
 - RAG (Retrieval-Augmented Generation) with MUD reference corpus
@@ -55,7 +55,7 @@ cargo tauri build
 - Adjustable generation parameters (temperature, top-p, top-k)
 - First-run setup with automatic corpus indexing
 
-## 📝 Full Changelog
+## Full Changelog
 
 ### Added
 - Ollama auto-start command for Windows (`start_ollama`)
@@ -74,23 +74,23 @@ cargo tauri build
 ### Fixed
 - Clarified repository structure (target/ folder intentionally excluded)
 
-## 🐛 Known Issues
+## Known Issues
 
 - macOS and Linux native builds not yet available (configuration ready, requires native build systems)
 - Some non-critical compiler warnings remain (unused code, dead code analysis)
 
-## 📚 Documentation
+## Documentation
 
 - [README.md](https://github.com/Thurtea/lpc-development-assistant/blob/main/README.md) - Getting started
 - [RELEASE_PROCESS.md](https://github.com/Thurtea/lpc-development-assistant/blob/main/RELEASE_PROCESS.md) - For maintainers
 
-## 🔗 Links
+## Links
 
 - **Repository:** https://github.com/Thurtea/lpc-development-assistant
 - **Issues:** https://github.com/Thurtea/lpc-development-assistant/issues
 - **Releases:** https://github.com/Thurtea/lpc-development-assistant/releases
 
-## 💬 Feedback
+## Feedback
 
 Please report bugs or feature requests via [GitHub Issues](https://github.com/Thurtea/lpc-development-assistant/issues).
 
