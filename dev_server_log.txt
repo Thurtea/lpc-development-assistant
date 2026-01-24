@@ -1,0 +1,181 @@
+     Running DevCommand (`cargo  run --no-default-features --features with_tauri --color always --`)
+        Info Watching E:\Work\lpc-development-assistant for changes...
+   Compiling lpc-dev-assistant v0.1.0 (E:\Work\lpc-development-assistant)
+    Building [=======================> ] 629/632: lpc-devΓÇª
+    Building [=======================> ] 630/632: lpc-devΓÇª
+                                                            
+warning: variable does not need to be mutable
+   --> src\ollama_client.rs:235:21
+    |
+235 |                 let mut response = match res {
+    |                     ----^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+    Building [=======================> ] 630/632: lpc-devΓÇª
+                                                            
+warning: variable `current_byte` is assigned to, but never used
+   --> src\context_manager.rs:160:25
+    |
+160 |                     let mut current_byte = 0;
+    |                         ^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_current_byte` instead
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `current_byte` is never read
+   --> src\context_manager.rs:165:29
+    |
+165 | ...                   current_byte = byte_pos;
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+    Building [=======================> ] 630/632: lpc-devΓÇª
+                                                            
+warning: field `templates_dir` is never read
+ --> src\prompt_builder.rs:7:5
+  |
+6 | pub struct PromptBuilder {
+  |            ------------- field in this struct
+7 |     templates_dir: PathBuf,
+  |     ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `main` is never used
+   --> src\driver_analyzer.rs:108:4
+    |
+108 | fn main() {
+    |    ^^^^
+
+    Building [=======================> ] 630/632: lpc-devΓÇª
+                                                            
+warning: `lpc-dev-assistant` (lib) generated 5 warnings (run `cargo fix --lib -p lpc-dev-assistant` to apply 1 suggestion)
+    Building [=======================> ] 631/632: lpc-devΓÇª
+                                                            
+warning: unused import: `AppHandle`
+ --> src-tauri\src\main.rs:9:30
+  |
+9 | use tauri::{Window, Manager, AppHandle};
+  |                              ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+    Building [=======================> ] 631/632: lpc-devΓÇª
+                                                            
+warning: unused imports: `CommandEvent`, `CommandOutput`, `WslExecutor`, and `run_wsl_command`
+ --> src-tauri\src\wsl\mod.rs:4:28
+  |
+4 | pub use command_executor::{run_wsl_command, CommandEvent, CommandOutput, WslExecutor};
+  |                            ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `anyhow`
+ --> src-tauri\src\driver\pipeline.rs:1:14
+  |
+1 | use anyhow::{anyhow, Result};
+  |              ^^^^^^
+
+    Building [=======================> ] 631/632: lpc-devΓÇª
+                                                            
+warning: unused imports: `CompileResult` and `DriverPipeline`
+ --> src-tauri\src\driver\mod.rs:3:20
+  |
+3 | pub use pipeline::{CompileResult, DriverPipeline};
+  |                    ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+    Building [=======================> ] 631/632: lpc-devΓÇª
+                                                            
+warning: field `0` is never read
+ --> src-tauri\src\wsl\command_executor.rs:9:16
+  |
+9 |     StdoutLine(String),
+  |     ---------- ^^^^^^
+  |     |
+  |     field in this variant
+  |
+  = note: `CommandEvent` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+  |
+9 -     StdoutLine(String),
+9 +     StdoutLine(()),
+  |
+
+warning: field `0` is never read
+  --> src-tauri\src\wsl\command_executor.rs:10:16
+   |
+10 |     StderrLine(String),
+   |     ---------- ^^^^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `CommandEvent` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+10 -     StderrLine(String),
+10 +     StderrLine(()),
+   |
+
+warning: field `0` is never read
+  --> src-tauri\src\wsl\command_executor.rs:11:10
+   |
+11 |     Exit(i32),
+   |     ---- ^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `CommandEvent` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+11 -     Exit(i32),
+11 +     Exit(()),
+   |
+
+    Building [=======================> ] 631/632: lpc-devΓÇª
+                                                            
+warning: method `with_timeout` is never used
+  --> src-tauri\src\wsl\command_executor.rs:35:12
+   |
+27 | impl WslExecutor {
+   | ---------------- method in this implementation
+...
+35 |     pub fn with_timeout(mut self, timeout: Duration) -> Self {
+   |            ^^^^^^^^^^^^
+
+    Building [=======================> ] 631/632: lpc-devΓÇª
+                                                            
+warning: methods `ast`, `bytecode`, and `test` are never used
+  --> src-tauri\src\driver\pipeline.rs:40:18
+   |
+19 | impl DriverPipeline {
+   | ------------------- methods in this implementation
+...
+40 |     pub async fn ast(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
+   |                  ^^^
+...
+53 |     pub async fn bytecode(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileRes...
+   |                  ^^^^^^^^
+...
+78 |     pub async fn test(&self, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
+   |                  ^^^^
+
+    Building [=======================> ] 631/632: lpc-devΓÇª
+                                                            
+warning: `lpc-dev-assistant` (bin "lpc-dev-assistant") generated 9 warnings (run `cargo fix --bin "lpc-dev-assistant" -p lpc-dev-assistant` to apply 4 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.58s
+     Running `target\debug\lpc-dev-assistant.exe`
+Starting LPC Dev Assistant...
+Working directory: "E:\\Work\\lpc-development-assistant"
+Templates directory: "E:\\Work\\lpc-development-assistant\\templates"
+PromptBuilder initialized successfully
+Initializing MudReferenceIndex...
+Index dir: "E:\\Work\\lpc-development-assistant\\.index"
+Corpus root: "E:\\Work\\lpc-development-assistant\\mud-references\\extracted"
+MudReferenceIndex initialized successfully
+Skipping index build (corpus missing)
+Building Tauri app...
+First run detected - setup required

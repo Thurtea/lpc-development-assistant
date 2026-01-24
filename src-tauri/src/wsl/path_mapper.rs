@@ -16,6 +16,14 @@ impl PathMapper {
         }
     }
 
+    pub fn from_config(windows_root: PathBuf, cfg: crate::config::DriverConfig) -> Self {
+        Self {
+            windows_root,
+            wsl_driver_root: cfg.wsl_driver_root,
+            wsl_library_root: cfg.wsl_library_root,
+        }
+    }
+
     pub fn wsl_driver_root(&self) -> &str {
         &self.wsl_driver_root
     }

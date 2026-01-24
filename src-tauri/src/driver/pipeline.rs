@@ -11,6 +11,14 @@ pub struct CompileResult {
     pub stderr: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunResult {
+    pub success: bool,
+    pub exit_code: Option<i32>,
+    pub output: String,
+    pub errors: String,
+}
+
 pub struct DriverPipeline {
     pub executor: WslExecutor,
     paths: Arc<PathMapper>,
@@ -84,6 +92,19 @@ impl DriverPipeline {
             exit_code: output.exit_code,
             stdout: output.stdout,
             stderr: output.stderr,
+        })
+    }
+
+    pub async fn run(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<RunResult> {
+        let safe_path = self.validate_and_escape_path(file_path)?;
+        let command = format!("./build/driver run {}", safe_path);
+
+        let output = self.executor.execute(&command).await?;
+        Ok(RunResult {
+            success: output.success,
+            exit_code: output.exit_code,
+            output: output.stdout.join("\n"),
+            errors: output.stderr.join("\n"),
         })
     }
 

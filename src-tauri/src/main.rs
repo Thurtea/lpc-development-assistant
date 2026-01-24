@@ -5,6 +5,7 @@ use std::sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}};
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
+use serde::Serialize;
 
 use tauri::{Window, Manager, AppHandle};
 use tauri::Emitter;
@@ -13,9 +14,25 @@ use lpc_dev_assistant::{OllamaClient, ContextManager, PromptBuilder, MudReferenc
 
 mod wsl;
 mod driver;
+mod config;
 
-use driver::pipeline::{CompileResult, DriverPipeline};
+use driver::pipeline::{CompileResult, RunResult, DriverPipeline};
 use wsl::PathMapper;
+use crate::config::{DriverConfig, load_driver_config, save_driver_config};
+
+#[derive(Debug, Serialize)]
+struct ComponentDiagnostic {
+    name: String,
+    ok: bool,
+    message: String,
+    fix_command: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct WslDiagnostics {
+    wsl_available: bool,
+    components: Vec<ComponentDiagnostic>,
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -363,6 +380,22 @@ async fn compile_lpc(
 }
 
 #[tauri::command]
+async fn run_lpc(
+    file_path: String,
+    state: tauri::State<'_, AppState>
+) -> Result<RunResult, String> {
+    if file_path.trim().is_empty() {
+        return Err("File path cannot be empty".to_string());
+    }
+    
+    let pipeline = DriverPipeline::new(state.path_mapper.clone());
+
+    pipeline.run(&file_path, |_| {})
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn build_driver_ui(state: tauri::State<'_, AppState>) -> Result<String, String> {
     let pipeline = DriverPipeline::new(state.path_mapper.clone());
     let result = pipeline
@@ -409,6 +442,80 @@ async fn test_driver_connection(state: tauri::State<'_, AppState>) -> Result<Str
         }
         Err(e) => Err(format!("WSL connection failed: {}", e))
     }
+}
+
+#[tauri::command]
+async fn get_driver_config() -> Result<DriverConfig, String> {
+    load_driver_config()
+}
+
+#[tauri::command]
+async fn save_driver_config_cmd(cfg: DriverConfig) -> Result<(), String> {
+    save_driver_config(&cfg)
+}
+
+async fn run_wsl_bool(cmd: &str) -> Result<bool, String> {
+    let output = tokio::process::Command::new("wsl.exe")
+        .args(["-e", "bash", "-lc", cmd])
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(output.status.success())
+}
+
+#[tauri::command]
+async fn validate_and_diagnose_wsl(config: DriverConfig) -> Result<WslDiagnostics, String> {
+    let mut components = Vec::new();
+
+    let wsl_status = tokio::process::Command::new("wsl.exe")
+        .args(["--status"])
+        .output()
+        .await;
+
+    let wsl_available = wsl_status.as_ref().map(|o| o.status.success()).unwrap_or(false);
+
+    if !wsl_available {
+        components.push(ComponentDiagnostic {
+            name: "WSL availability".to_string(),
+            ok: false,
+            message: "WSL is not installed or not accessible. Install WSL and reboot.".to_string(),
+            fix_command: Some("wsl --install".to_string()),
+        });
+        return Ok(WslDiagnostics { wsl_available, components });
+    }
+
+    // Driver directory
+    let driver_dir_cmd = format!("test -d {}", config.wsl_driver_root);
+    let driver_dir_ok = run_wsl_bool(&driver_dir_cmd).await.unwrap_or(false);
+    components.push(ComponentDiagnostic {
+        name: "Driver directory".to_string(),
+        ok: driver_dir_ok,
+        message: if driver_dir_ok { "Driver directory found".to_string() } else { format!("Driver directory not found at {}", config.wsl_driver_root) },
+        fix_command: if driver_dir_ok { None } else { Some(format!("mkdir -p {}", config.wsl_driver_root)) },
+    });
+
+    // Driver binary
+    let driver_bin = format!("{}/build/driver", config.wsl_driver_root.trim_end_matches('/'));
+    let driver_bin_cmd = format!("test -x {}", driver_bin);
+    let driver_bin_ok = run_wsl_bool(&driver_bin_cmd).await.unwrap_or(false);
+    components.push(ComponentDiagnostic {
+        name: "Driver binary".to_string(),
+        ok: driver_bin_ok,
+        message: if driver_bin_ok { "Driver binary is present and executable".to_string() } else { format!("Driver binary missing or not executable at {}", driver_bin) },
+        fix_command: if driver_bin_ok { None } else { Some(format!("cd {} && make || cargo build --release", config.wsl_driver_root)) },
+    });
+
+    // Library directory
+    let lib_dir_cmd = format!("test -d {}", config.wsl_library_root);
+    let lib_dir_ok = run_wsl_bool(&lib_dir_cmd).await.unwrap_or(false);
+    components.push(ComponentDiagnostic {
+        name: "Library directory".to_string(),
+        ok: lib_dir_ok,
+        message: if lib_dir_ok { "Library directory found".to_string() } else { format!("Library directory not found at {}", config.wsl_library_root) },
+        fix_command: if lib_dir_ok { None } else { Some(format!("mkdir -p {}", config.wsl_library_root)) },
+    });
+
+    Ok(WslDiagnostics { wsl_available, components })
 }
 
 #[tauri::command]fn search_references(query: String, limit: Option<usize>, state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
@@ -483,10 +590,18 @@ fn main() {
         eprintln!("Skipping index build (corpus missing)");
     }
 
-    let path_mapper = PathMapper::new(
+    // Load driver configuration (WSL paths) and initialize PathMapper
+    let driver_cfg = match load_driver_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to load driver config: {}. Using defaults.", e);
+            DriverConfig::default_for_current_user()
+        }
+    };
+
+    let path_mapper = PathMapper::from_config(
         cwd.clone(),
-        "/home/thurtea/amlp-driver".to_string(),
-        "/home/thurtea/amlp-library".to_string(),
+        driver_cfg.clone(),
     );
 
     let state = AppState {
@@ -521,8 +636,12 @@ fn main() {
             run_initial_setup,
             mark_setup_complete,
             compile_lpc,
+            run_lpc,
             build_driver_ui,
-            test_driver_connection
+            test_driver_connection,
+            get_driver_config,
+            save_driver_config_cmd,
+            validate_and_diagnose_wsl
         ])
         .setup(|app| {
             let app_handle = app.handle();

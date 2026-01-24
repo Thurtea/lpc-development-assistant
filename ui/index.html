@@ -355,6 +355,7 @@
   <div class="tabs-header">
     <button class="tab-btn active" data-tab="assistant">Assistant</button>
     <button class="tab-btn" data-tab="driver">Driver</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
   </div>
 
   <!-- Assistant Tab (Main content) -->
@@ -468,6 +469,10 @@
     <div class="card">
       <h3 style="margin-top: 0;">AMLP Driver Integration</h3>
       <p style="color: var(--muted); font-size: 14px;">Test WSL command execution and LPC file compilation.</p>
+      <div id="driver-warning" style="display:none; margin-top:8px; padding:10px; border-radius:8px; border:1px solid var(--warning); background:rgba(251,191,36,0.1); color: var(--warning);">
+        WSL driver setup is incomplete. Fix setup to enable compile/run.
+        <button id="open-settings-btn" class="action-btn" style="margin-left:10px; background:transparent; color: var(--warning); border-color: var(--warning);">Fix Setup</button>
+      </div>
     </div>
 
     <div class="card">
@@ -487,6 +492,15 @@
     </div>
 
     <div class="card">
+      <h3>Run LPC File</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Run an LPC file using the amlp-driver (compile and execute)</p>
+      <label style="display: block; margin-bottom: 6px; color: var(--text); font-weight: 600;">File Path (WSL):</label>
+      <input type="text" id="lpc-run-file-path" placeholder="/home/thurtea/amlp-driver/tests/lpc/simple.c" style="width: 100%; margin-bottom: 12px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+      <button id="run-btn" class="action-btn">Run File</button>
+      <pre id="run-output" style="margin-top: 10px; padding: 10px; background: var(--code); border-radius: 4px; border: 1px solid var(--border); max-height: 300px; overflow-y: auto; color: var(--muted); font-size: 12px;">Ready to run...</pre>
+    </div>
+
+    <div class="card">
       <h3>Build Driver UI</h3>
       <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Run the styled terminal UI build system</p>
       <button id="build-ui-btn" class="action-btn">Run make build-ui</button>
@@ -494,6 +508,45 @@
     </div>
   </div>
   <!-- End Driver Tab -->
+
+  <!-- Settings Tab -->
+  <div id="settings" class="tab-content">
+    <div class="card">
+      <h3>Settings</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Configure WSL driver and library paths.</p>
+      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">WSL Username</label>
+      <input type="text" id="wsl-username" placeholder="thurtea" style="width:100%; margin-bottom:8px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">Driver Root (WSL)</label>
+      <input type="text" id="wsl-driver-root" placeholder="/home/thurtea/amlp-driver" style="width:100%; margin-bottom:8px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">Library Root (WSL)</label>
+      <input type="text" id="wsl-library-root" placeholder="/home/thurtea/amlp-library" style="width:100%; margin-bottom:12px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+      <div class="btn-row">
+        <button id="load-config-btn" class="action-btn">Load Config</button>
+        <button id="save-config-btn" class="action-btn">Save Settings</button>
+        <button id="test-paths-btn" class="action-btn">Test Paths</button>
+      </div>
+      <pre id="settings-output" style="margin-top:10px; padding:10px; background:var(--code); border-radius:4px; border:1px solid var(--border); max-height:200px; overflow-y:auto; color:var(--muted); font-size:12px;">Settings status...</pre>
+    </div>
+
+    <div class="card">
+      <h3>WSL Validation</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Check required paths and binaries. See <a href="README_WSL_SETUP.md" style="color: var(--accent);">README_WSL_SETUP.md</a> for setup steps.</p>
+      <div id="wsl-status-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+        <div class="status" id="status-wsl">WSL: pending</div>
+        <div class="status" id="status-driver-dir">Driver directory: pending</div>
+        <div class="status" id="status-driver-bin">Driver binary: pending</div>
+        <div class="status" id="status-library-dir">Library directory: pending</div>
+      </div>
+      <div class="btn-row">
+        <button id="run-validation-btn" class="action-btn">Run Validation</button>
+        <button id="copy-fix-driver-dir" class="action-btn" data-target="driver-dir" style="background:transparent; color: var(--muted); border:1px solid var(--border);">Copy driver dir fix</button>
+        <button id="copy-fix-driver-bin" class="action-btn" data-target="driver-bin" style="background:transparent; color: var(--muted); border:1px solid var(--border);">Copy driver build cmd</button>
+        <button id="copy-fix-library-dir" class="action-btn" data-target="library-dir" style="background:transparent; color: var(--muted); border:1px solid var(--border);">Copy library dir fix</button>
+      </div>
+      <pre id="validation-output" style="margin-top:10px; padding:10px; background:var(--code); border-radius:4px; border:1px solid var(--border); max-height:220px; overflow-y:auto; color:var(--muted); font-size:12px;">Validation not run yet.</pre>
+    </div>
+  </div>
+  <!-- End Settings Tab -->
 
   <div id="toast" class="toast"></div>
 
@@ -507,6 +560,14 @@
       loading: false,
       cancelToken: 0,
       lastMetrics: null,
+      wslReady: false,
+      wslDiag: null,
+    };
+
+    const wslFixes = {
+      driverDir: null,
+      driverBin: null,
+      libraryDir: null,
     };
 
     const settingsDefaults = {
@@ -695,6 +756,30 @@
       }
     }
 
+    async function performWslValidation() {
+      const out = document.getElementById('validation-output');
+      if (out) {
+        out.textContent = 'Running validation...';
+        out.style.color = 'var(--muted)';
+      }
+      try {
+        const cfg = await window.__TAURI_INVOKE__('get_driver_config');
+        const diag = await window.__TAURI_INVOKE__('validate_and_diagnose_wsl', { config: cfg });
+        renderWslDiagnostics(diag);
+        return diag;
+      } catch (e) {
+        if (out) {
+          out.textContent = `Validation failed: ${e}`;
+          out.style.color = '#ef4444';
+        }
+        const warn = document.getElementById('driver-warning');
+        if (warn) warn.style.display = 'block';
+        const compileBtn = document.getElementById('compile-btn');
+        if (compileBtn) compileBtn.disabled = true;
+        return null;
+      }
+    }
+
     function renderContext(results) {
       const list = document.getElementById('context-list');
       if (!list) return;
@@ -717,6 +802,63 @@
       } catch (e) {
         console.warn('context fetch failed', e);
         renderContext([]);
+      }
+    }
+
+    function setStatusRow(id, ok, message) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const dot = document.createElement('span');
+      dot.className = 'dot ' + (ok ? 'ok' : 'err');
+      el.innerHTML = '';
+      el.appendChild(dot);
+      const text = document.createElement('span');
+      text.textContent = ' ' + message;
+      text.style.marginLeft = '6px';
+      el.appendChild(text);
+    }
+
+    function renderWslDiagnostics(diag) {
+      state.wslDiag = diag;
+      const allOk = diag.wsl_available && (diag.components || []).every(c => c.ok);
+      state.wslReady = allOk;
+
+      const warn = document.getElementById('driver-warning');
+      if (warn) warn.style.display = allOk ? 'none' : 'block';
+
+      const compileBtn = document.getElementById('compile-btn');
+      if (compileBtn) compileBtn.disabled = !allOk;
+
+      const runBtn = document.getElementById('run-btn');
+      if (runBtn) runBtn.disabled = !allOk;
+
+      const statusMap = {
+        'WSL availability': 'status-wsl',
+        'Driver directory': 'status-driver-dir',
+        'Driver binary': 'status-driver-bin',
+        'Library directory': 'status-library-dir',
+      };
+
+      (diag.components || []).forEach(c => {
+        const targetId = statusMap[c.name];
+        if (targetId) {
+          setStatusRow(targetId, c.ok, `${c.name}: ${c.message}`);
+        }
+        if (c.name === 'Driver directory') wslFixes.driverDir = c.fix_command || null;
+        if (c.name === 'Driver binary') wslFixes.driverBin = c.fix_command || null;
+        if (c.name === 'Library directory') wslFixes.libraryDir = c.fix_command || null;
+      });
+
+      const log = document.getElementById('validation-output');
+      if (log) {
+        const lines = [];
+        lines.push(`WSL available: ${diag.wsl_available}`);
+        (diag.components || []).forEach(c => {
+          lines.push(`${c.ok ? 'OK' : 'MISSING'} - ${c.name}: ${c.message}`);
+          if (!c.ok && c.fix_command) lines.push(`Fix: ${c.fix_command}`);
+        });
+        log.textContent = lines.join('\n');
+        log.style.color = allOk ? '#4ade80' : 'var(--muted)';
       }
     }
 
@@ -827,6 +969,21 @@
         navigator.clipboard.writeText(promptText);
         toast('Prompt copied!');
       });
+
+      document.getElementById('run-validation-btn')?.addEventListener('click', () => performWslValidation());
+
+      function copyFix(target) {
+        const fix = target === 'driver-dir' ? wslFixes.driverDir : target === 'driver-bin' ? wslFixes.driverBin : target === 'library-dir' ? wslFixes.libraryDir : null;
+        if (!fix) { toast('No fix command available'); return; }
+        navigator.clipboard.writeText(fix);
+        toast('Fix command copied');
+      }
+
+      document.getElementById('copy-fix-driver-dir')?.addEventListener('click', () => copyFix('driver-dir'));
+      document.getElementById('copy-fix-driver-bin')?.addEventListener('click', () => copyFix('driver-bin'));
+      document.getElementById('copy-fix-library-dir')?.addEventListener('click', () => copyFix('library-dir'));
+
+      document.getElementById('open-settings-btn')?.addEventListener('click', () => switchTab('settings'));
     }
 
 
@@ -842,6 +999,7 @@
       await checkAndStartOllama();
       
       await loadModels();
+      await performWslValidation();
       setStatus('Ready', 'success');
     });
 
@@ -1008,6 +1166,38 @@
       }
     });
 
+    document.getElementById('run-btn')?.addEventListener('click', async () => {
+      const outputEl = document.getElementById('run-output');
+      const filePath = document.getElementById('lpc-run-file-path').value.trim();
+      
+      if (!filePath) {
+        outputEl.textContent = 'Please enter a file path';
+        outputEl.style.color = '#ef4444';
+        return;
+      }
+      
+      outputEl.textContent = 'Running...';
+      outputEl.style.color = 'var(--muted)';
+      
+      try {
+        const result = await window.__TAURI_INVOKE__('run_lpc', { file_path: filePath });
+        
+        const output = result.output || '(no output)';
+        const errors = result.errors || '(no errors)';
+        
+        if (result.success) {
+          outputEl.textContent = `Run successful (exit code ${result.exit_code || 0})\n\nOutput:\n${output}\n\nErrors:\n${errors}`;
+          outputEl.style.color = '#4ade80';
+        } else {
+          outputEl.textContent = `Run failed (exit code ${result.exit_code || 'unknown'})\n\nOutput:\n${output}\n\nErrors:\n${errors}`;
+          outputEl.style.color = '#ef4444';
+        }
+      } catch (error) {
+        outputEl.textContent = `Error: ${error}`;
+        outputEl.style.color = '#ef4444';
+      }
+    });
+
     document.getElementById('build-ui-btn')?.addEventListener('click', async () => {
       const outputEl = document.getElementById('build-output');
       outputEl.textContent = 'Building...';
@@ -1019,6 +1209,54 @@
       } catch (error) {
         outputEl.textContent = `Error: ${error}`;
         outputEl.style.color = '#ef4444';
+      }
+    });
+
+    // Settings handlers
+    document.getElementById('load-config-btn')?.addEventListener('click', async () => {
+      const out = document.getElementById('settings-output');
+      out.textContent = 'Loading config...';
+      try {
+        const cfg = await window.__TAURI_INVOKE__('get_driver_config');
+        document.getElementById('wsl-username').value = cfg.wsl_username || '';
+        document.getElementById('wsl-driver-root').value = cfg.wsl_driver_root || '';
+        document.getElementById('wsl-library-root').value = cfg.wsl_library_root || '';
+        out.textContent = 'Config loaded.';
+        out.style.color = '#4ade80';
+      } catch (e) {
+        out.textContent = `Error loading config: ${e}`;
+        out.style.color = '#ef4444';
+      }
+    });
+
+    document.getElementById('save-config-btn')?.addEventListener('click', async () => {
+      const out = document.getElementById('settings-output');
+      out.textContent = 'Saving config...';
+      const cfg = {
+        wsl_username: document.getElementById('wsl-username').value.trim(),
+        wsl_driver_root: document.getElementById('wsl-driver-root').value.trim(),
+        wsl_library_root: document.getElementById('wsl-library-root').value.trim(),
+      };
+      try {
+        await window.__TAURI_INVOKE__('save_driver_config_cmd', cfg);
+        out.textContent = 'Config saved.';
+        out.style.color = '#4ade80';
+      } catch (e) {
+        out.textContent = `Error saving config: ${e}`;
+        out.style.color = '#ef4444';
+      }
+    });
+
+    document.getElementById('test-paths-btn')?.addEventListener('click', async () => {
+      const out = document.getElementById('settings-output');
+      out.textContent = 'Testing WSL driver path...';
+      try {
+        const result = await window.__TAURI_INVOKE__('test_driver_connection');
+        out.textContent = result;
+        out.style.color = '#4ade80';
+      } catch (e) {
+        out.textContent = `Path test failed: ${e}`;
+        out.style.color = '#ef4444';
       }
     });
   </script>
