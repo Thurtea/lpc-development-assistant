@@ -114,6 +114,12 @@
       margin-bottom: 10px;
       font-weight: 700;
       letter-spacing: 0.2px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .section-title > span:first-child {
+      flex: 1;
     }
 
     .subgrid {
@@ -172,7 +178,10 @@
       border-radius: 12px;
       padding: 14px;
       min-height: 260px;
+      max-height: 600px;
       overflow-y: auto;
+      overflow-x: hidden;
+      clear: both;
     }
 
     .markdown-body {
