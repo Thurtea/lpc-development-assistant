@@ -23,11 +23,31 @@ mud-references/*.tar.gz
 
 # Logs/Temp
 *.log
+*.txt
+!README*.txt
 .DS_Store
 .setup_complete
+dev_server_log.txt
+model_comparison_*.txt
+model_comparison_*.json
 
 # Documentation (keep only essential)
 session-notes/
+*SUMMARY*.md
+*ROADMAP*.md
+*GUIDE*.md
+*CHANGES*.md
+BUILD_INFO.md
+WSL_INTEGRATION_STATUS.md
+QUICK_START.md
+docs/*SUMMARY*.md
+docs/*ROADMAP*.md  
+docs/*GUIDE*.md
+docs/*CHANGES*.md
+
+# Test/diagnostic scripts
+test_*.ps1
+diagnostic_*.ps1
 
 # Old/Backup
 icons/old_icons/

@@ -477,9 +477,14 @@
     <div class="card">
       <h3 style="margin-top: 0;">AMLP Driver Integration</h3>
       <p style="color: var(--muted); font-size: 14px;">Test WSL command execution and LPC file compilation.</p>
-      <div id="driver-warning" style="display:none; margin-top:8px; padding:10px; border-radius:8px; border:1px solid var(--warning); background:rgba(251,191,36,0.1); color: var(--warning);">
-        WSL driver setup is incomplete. Fix setup to enable compile/run.
-        <button id="open-settings-btn" class="action-btn" style="margin-left:10px; background:transparent; color: var(--warning); border-color: var(--warning);">Fix Setup</button>
+      <p style="color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6;">
+        <strong>Note:</strong> This feature requires Windows Subsystem for Linux (WSL) and an AMLP driver.<br>
+        If you don't have WSL setup, click the Settings tab above for a step-by-step guide.
+      </p>
+      <div id="driver-warning" style="display:none; margin-top:12px; padding:12px; border-radius:8px; border:1px solid var(--warning); background:rgba(251,191,36,0.1); color: var(--warning);">
+        <strong>WSL Setup Required</strong><br>
+        <span style="font-size: 13px;">The driver integration is not configured. Go to Settings tab for setup instructions, or click below:</span>
+        <button id="open-settings-btn" class="action-btn" style="margin-top:8px; background:transparent; color: var(--warning); border-color: var(--warning);">Open Setup Guide</button>
       </div>
     </div>
 
@@ -519,14 +524,52 @@
 
   <!-- Settings Tab -->
   <div id="settings" class="tab-content">
+    <div class="card" style="background: linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(147,51,234,0.05) 100%); border: 1px solid var(--accent);">
+      <h3 style="margin-top: 0; color: var(--accent);">WSL Setup Required (Optional)</h3>
+      <p style="color: var(--text); font-size: 14px; line-height: 1.6; margin-bottom: 12px;">
+        <strong>What is this?</strong> The Driver Integration feature lets you compile and test LPC code using a local AMLP driver running in Windows Subsystem for Linux (WSL).
+      </p>
+      <p style="color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 12px;">
+        <strong>Do I need this?</strong> No! The AI assistant works perfectly without WSL. This is only needed if you want to compile/run LPC code directly from the app.
+      </p>
+      <details style="margin-bottom: 16px; background: var(--panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+        <summary style="cursor: pointer; font-weight: 600; color: var(--accent);">Quick Setup Guide (Click to expand)</summary>
+        <div style="margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.7;">
+          <p><strong>Step 1:</strong> Install WSL (if not already installed)</p>
+          <pre style="background: var(--code); padding: 8px; border-radius: 4px; margin: 8px 0;">wsl --install</pre>
+          <p style="margin-top: 8px;">Reboot Windows, then verify WSL is working:</p>
+          <pre style="background: var(--code); padding: 8px; border-radius: 4px; margin: 8px 0;">wsl --status</pre>
+          
+          <p style="margin-top: 12px;"><strong>Step 2:</strong> Find your WSL username</p>
+          <pre style="background: var(--code); padding: 8px; border-radius: 4px; margin: 8px 0;">wsl whoami</pre>
+          <p style="margin-top: 4px; font-size: 12px;">(This shows your Linux username, e.g., "thurtea" or "john")</p>
+          
+          <p style="margin-top: 12px;"><strong>Step 3:</strong> Create directories for the driver</p>
+          <pre style="background: var(--code); padding: 8px; border-radius: 4px; margin: 8px 0;">wsl mkdir -p ~/amlp-driver ~/amlp-library</pre>
+          
+          <p style="margin-top: 12px;"><strong>Step 4:</strong> Enter your settings below</p>
+          <ul style="margin: 8px 0; padding-left: 20px;">
+            <li>WSL Username: Your Linux username from Step 2</li>
+            <li>Driver Root: <code>/home/YOUR_USERNAME/amlp-driver</code></li>
+            <li>Library Root: <code>/home/YOUR_USERNAME/amlp-library</code></li>
+          </ul>
+          
+          <p style="margin-top: 12px;"><strong>Step 5:</strong> Install/build your AMLP driver</p>
+          <p style="font-size: 12px;">Copy your driver source to the WSL directory and build it following your driver's build instructions.</p>
+          
+          <p style="margin-top: 12px;"><strong>Step 6:</strong> Click "Run Validation" below to verify everything works!</p>
+        </div>
+      </details>
+    </div>
+    
     <div class="card">
-      <h3>Settings</h3>
-      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Configure WSL driver and library paths.</p>
-      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">WSL Username</label>
+      <h3>WSL Configuration</h3>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Enter your WSL paths. Click the guide above if you need help.</p>
+      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">WSL Username <span style="color:var(--muted); font-weight:400; font-size:12px;">(run: wsl whoami)</span></label>
       <input type="text" id="wsl-username" placeholder="thurtea" style="width:100%; margin-bottom:8px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
-      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">Driver Root (WSL)</label>
+      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">Driver Root (WSL) <span style="color:var(--muted); font-weight:400; font-size:12px;">(Linux path to driver directory)</span></label>
       <input type="text" id="wsl-driver-root" placeholder="/home/thurtea/amlp-driver" style="width:100%; margin-bottom:8px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
-      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">Library Root (WSL)</label>
+      <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">Library Root (WSL) <span style="color:var(--muted); font-weight:400; font-size:12px;">(Linux path to mudlib files)</span></label>
       <input type="text" id="wsl-library-root" placeholder="/home/thurtea/amlp-library" style="width:100%; margin-bottom:12px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
       <div class="btn-row">
         <button id="load-config-btn" class="action-btn">Load Config</button>
@@ -538,7 +581,7 @@
 
     <div class="card">
       <h3>WSL Validation</h3>
-      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Check required paths and binaries. See <a href="README_WSL_SETUP.md" style="color: var(--accent);">README_WSL_SETUP.md</a> for setup steps.</p>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">Click "Run Validation" to check if WSL and your driver are properly configured. If validation fails, use the copy buttons to get the fix commands.</p>
       <div id="wsl-status-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
         <div class="status" id="status-wsl">WSL: pending</div>
         <div class="status" id="status-driver-dir">Driver directory: pending</div>

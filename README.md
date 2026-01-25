@@ -18,10 +18,10 @@ A cross-platform desktop application for LPC development, powered by Rust and Ol
 ### Required
 - **Ollama** running locally (default: http://localhost:11434)
 - **qwen2.5-coder:3b** model installed
-- Rust 1.70+
+- Rust 1.70+ (for building from source)
 
 ### Optional
-- For building from source: Cargo and standard build tools
+- **WSL (Windows Subsystem for Linux)** - Only needed if you want to use the "Driver" tab to compile/run LPC code directly. The AI assistant works perfectly without WSL.
 
 ## Installation
 
@@ -63,6 +63,18 @@ Installers will be in `target/release/bundle/`
 ---
 
 **Note:** The `target/` folder is not in the repository (standard Rust practice). Pre-built installers are distributed via [GitHub Releases](https://github.com/Thurtea/lpc-development-assistant/releases).
+
+### First Run Setup
+1. Launch the app
+2. Make sure Ollama is running
+3. Install the required model: `ollama pull qwen2.5-coder:3b`
+4. Start using the AI assistant!
+
+**Optional - Driver Integration:**
+If you want to compile/run LPC code (Driver tab), you'll need WSL:
+- See the **Settings** tab in the app for a step-by-step setup guide
+- Or read [README_WSL_SETUP.md](README_WSL_SETUP.md) for detailed instructions
+- **Note:** The AI assistant works without WSL - this is only for advanced testing
 
 ## Building from Source
 
@@ -165,7 +177,7 @@ This application is **locked to use qwen2.5-coder:3b exclusively**. This model w
 
 | Model | Accuracy | Quality | Speed | Recommendation |
 |-------|----------|---------|-------|----------------|
-| **qwen2.5-coder:3b** | **85.0%** | 70.3% | 16.6s | ⭐ **Best Choice** |
+| **qwen2.5-coder:3b** | **85.0%** | 70.3% | 16.6s | Best Choice |
 | qwen2.5-coder:7b | 80.0% | 71.4% | 20.2s | Good but slower |
 | qwen2.5-coder:1.5b | 55.0% | 68.7% | 15.1s | Too small |
 | llama2:latest | 46.7% | 67.6% | 18.0s | Poor for code |
