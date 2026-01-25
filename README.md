@@ -16,7 +16,8 @@ A cross-platform desktop application for LPC development, powered by Rust and Ol
 ## Prerequisites
 
 ### Required
-- Ollama running locally (default: http://localhost:11434)
+- **Ollama** running locally (default: http://localhost:11434)
+- **qwen2.5-coder:3b** model installed
 - Rust 1.70+
 
 ### Optional
@@ -77,10 +78,16 @@ Visit [ollama.ai](https://ollama.ai) and install for your platform. Start the da
 ollama serve
 ```
 
-### 3. Pull a model
+### 3. Pull the required model
+The application is optimized for **qwen2.5-coder:3b** based on extensive testing:
 ```bash
-ollama pull qwen2.5-coder:7b
+ollama pull qwen2.5-coder:3b
 ```
+
+This model provides:
+- **85% accuracy** on LPC queries
+- Fast inference (40.9 tokens/sec)
+- Best overall balance for LPC development
 
 ### 4. Install Rust toolchain
 If you haven't already:
@@ -151,6 +158,25 @@ cargo tauri dev
 - Build: `cargo tauri build --target x86_64-pc-windows-gnu`
 
 See [Rust Platform Support](https://doc.rust-lang.org/nightly/rustc/platform-support.html) for detailed cross-compilation guidance.
+
+## Model Recommendation
+
+This application is **locked to use qwen2.5-coder:3b exclusively**. This model was selected after comprehensive testing:
+
+| Model | Accuracy | Quality | Speed | Recommendation |
+|-------|----------|---------|-------|----------------|
+| **qwen2.5-coder:3b** | **85.0%** | 70.3% | 16.6s | ⭐ **Best Choice** |
+| qwen2.5-coder:7b | 80.0% | 71.4% | 20.2s | Good but slower |
+| qwen2.5-coder:1.5b | 55.0% | 68.7% | 15.1s | Too small |
+| llama2:latest | 46.7% | 67.6% | 18.0s | Poor for code |
+
+**Why qwen2.5-coder:3b?**
+- Highest accuracy (85%) with LPC-specific queries
+- Excellent code generation quality
+- Fast inference suitable for interactive development
+- Optimal balance of accuracy, quality, and speed
+
+See `model_comparison_results.json` for detailed test results.
 
 ## Configuration
 

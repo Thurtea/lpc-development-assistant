@@ -356,8 +356,7 @@
     </div>
     <div class="controls">
       <div class="status" id="conn-status"><span class="dot"></span><span id="status-text">Connecting…</span></div>
-      <select id="model-select" class="select"></select>
-      <button id="refresh-models">Refresh Models</button>
+      <span class="pill">Model: qwen2.5-coder:3b</span>
     </div>
   </header>
 
@@ -430,7 +429,7 @@
         </div>
       </div>
       <div class="chip-row" id="meta-row">
-        <span class="chip" id="meta-model">Model: -</span>
+        <span class="chip" id="meta-model">Model: qwen2.5-coder:3b</span>
         <span class="chip" id="meta-latency">Latency: -</span>
       </div>
       <div class="response">
@@ -564,8 +563,11 @@
       try { return window.localStorage; } catch { return null; }
     })();
 
+    // Required model for LPC Development Assistant
+    const REQUIRED_MODEL = 'qwen2.5-coder:3b';
+
     const state = {
-      currentModel: '',
+      currentModel: REQUIRED_MODEL,
       loading: false,
       cancelToken: 0,
       lastMetrics: null,
@@ -738,29 +740,19 @@
     }
 
     async function loadModels() {
-      const select = document.getElementById('model-select');
-      if (!select) return;
-      select.innerHTML = '<option>Loading models…</option>';
+      // Verify qwen2.5-coder:3b is available
       try {
         const models = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('get_available_models');
-        select.innerHTML = '';
-        if (Array.isArray(models) && models.length) {
-          models.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m; opt.textContent = m; select.appendChild(opt);
-          });
-          const saved = store?.getItem('lpc-model');
-          if (saved && models.includes(saved)) select.value = saved;
-          state.currentModel = select.value;
-          document.getElementById('meta-model').textContent = `Model: ${state.currentModel}`;
-          setStatus('Ready', 'success');
+        if (!models.includes(REQUIRED_MODEL)) {
+          console.warn(`Required model ${REQUIRED_MODEL} not found. Available:`, models);
+          setStatus(`Please install: ollama pull ${REQUIRED_MODEL}`, 'error');
+          toast(`Model ${REQUIRED_MODEL} not found! Run: ollama pull ${REQUIRED_MODEL}`);
         } else {
-          select.innerHTML = '<option>No models found</option>';
-          setStatus('No models available', 'error');
+          state.currentModel = REQUIRED_MODEL;
+          setStatus('Ready', 'success');
         }
       } catch (e) {
         console.error(e);
-        select.innerHTML = '<option>Error loading models</option>';
         setStatus('Cannot reach Ollama', 'error');
       }
     }
@@ -881,7 +873,7 @@
       const payloadQuestion = systemPrompt ? `${systemPrompt}\n\n${q}` : q;
 
       const opts = {
-        model: document.getElementById('model-select').value,
+        model: state.currentModel,
         question: payloadQuestion,
         context_type: rag ? 'references' : null,
         temperature: parseFloat(document.getElementById('temperature').value),
@@ -959,12 +951,7 @@
         navigator.clipboard.writeText(text);
         toast('Response copied');
       });
-      document.getElementById('refresh-models').addEventListener('click', loadModels);
-      document.getElementById('model-select').addEventListener('change', (e) => {
-        state.currentModel = e.target.value;
-        store?.setItem('lpc-model', state.currentModel);
-        document.getElementById('meta-model').textContent = `Model: ${state.currentModel}`;
-      });
+      // Model is locked to qwen2.5-coder:3b - removed refresh and selection listeners
       document.getElementById('stop-btn').addEventListener('click', stopGeneration);
       document.getElementById('question').addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();

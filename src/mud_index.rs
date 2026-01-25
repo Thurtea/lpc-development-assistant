@@ -18,6 +18,7 @@ pub struct CodeSnippet {
     pub snippet: String,
 }
 
+#[derive(Clone)]
 pub struct MudReferenceIndex {
     corpus_root: PathBuf,
     term_index: HashMap<String, Vec<(PathBuf, usize)>>,

@@ -59,6 +59,14 @@ name = "gui"
 path = "src/bin/gui.rs"
 required-features = ["iced-gui"]
 
+[[bin]]
+name = "model_comparison"
+path = "src/bin/model_comparison.rs"
+
+[[bin]]
+name = "enhanced_query"
+path = "src/bin/enhanced_query.rs"
+
 [build-dependencies]
 tauri-build = { version = "2.1", features = [] }
 

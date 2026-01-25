@@ -1,0 +1,58 @@
+Efuns Implementation Context (C)
+
+This file provides guidance for implementing efuns (engine-level functions exposed to LPC) in C.
+
+1) Calling convention
+- Efuns should accept a consistent stack-based calling convention: arguments are read from the VM stack in a defined order and results pushed back.
+- Validate argument types and counts early and raise descriptive runtime errors if mismatched.
+
+2) Marshalling types
+- Provide helper routines to convert VM values to C representations and back (e.g., `value_to_string`, `value_to_int`, `push_string`, `push_object`).
+
+3) Error handling
+- Use the driver’s error/reporting APIs to signal errors to the LPC program. Prefer returning errors with context (file, line, function name).
+
+4) Performance
+- Where appropriate, operate on raw buffers to avoid repeated allocations. Cache common lookups in the efun dispatch table.
+
+5) Common efun examples
+- `find_object`, `load_object`, `call_other`, `set_prop`, `query_prop`, `add_action`, `remove_action`, `message`, `write`, `receive_object`.
+
+6) Thread-safety and reentrancy
+- The majority of drivers are single-threaded for VM execution. If introducing background threads, ensure that VM state is not mutated concurrently without proper synchronization.
+
+7) Extension modules
+- Make efuns discoverable by registering them in a table at startup. Use a consistent registration macro to keep code readable.
+
+Provide detailed comments and small examples when asking for efun implementations so generated C can follow the driver's expected conventions.
+Efuns Implementation Context (C)
+
+This file explains patterns for implementing efuns (native functions) in the driver in C.
+
+1) Registration
+- Maintain a table of efun descriptors: name, function pointer, min/max arity, and attributes (e.g., pure, varargs).
+- During driver initialization register efuns into a hash table for fast lookup.
+
+2) Calling Convention
+- Define a Value or svalue_t representing LPC runtime values (types: T_NUMBER, T_STRING, T_OBJECT, T_ARRAY, T_MAPPING, T_FLOAT, T_FUNCTION, T_POINTER, T_STRUCT, etc.).
+- Efuns receive an argument list on the VM stack or via a C array of svalue_t and push their return value(s) back onto the VM stack.
+- Provide helpers for extracting arguments with type checks and for constructing return values.
+
+3) Error Handling
+- Efuns should validate inputs and call the VM's runtime_error or raise_error facilities on misuse.
+- Keep side-effects explicit and document any functions that may allocate memory or change ownership.
+
+4) Example Pattern
+- A typical efun implementation:
+  - Pop arguments from the stack into local svalue_t variables
+  - Perform type checks and conversions
+  - Execute core logic using driver utility functions
+  - Push result onto the stack and return
+
+5) Thread-Safety & Reentrancy
+- Where possible, design efuns to be reentrant and avoid global mutable state; if necessary, document locking requirements.
+
+6) Performance
+- Avoid unnecessary allocations in hot efuns; reuse buffers and provide fast-paths for common types.
+
+Include sample efun C signatures and small examples (e.g., efun: int file_size(string path); efun: void say(string msg);) and explain how to map them into the driver registration table.

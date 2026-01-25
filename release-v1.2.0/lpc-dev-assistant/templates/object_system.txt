@@ -1,0 +1,546 @@
+LPC OBJECT SYSTEM PATTERNS (MudOS / FluffOS)
+================================================
+
+Guardrails
+- Use existing headers only (vm.h, codegen.h, object.h if provided). No redefinitions.
+- Emit bytecode; do not interpret AST directly. Use CALL_METHOD opcode for dynamic dispatch.
+- Preserve reference counts; every object ref increment must be paired with a decrement on release.
+- Respect apply hooks (create, reset, heart_beat, clean_up). Do not bypass master object checks.
+- Method lookup must walk inheritance chains depth-first, left-to-right.
+- Always check object loading status before executing methods (flags: O_LOADING, O_DESTRUCTED).
+- Enforce security: validate privileges via master object hooks before cross-object calls.
+
+Core Structures
+- object_s: runtime object instance, contains program pointer, variables, flags, heart_beat info, ref count.
+- program_s: compiled program (functions, strings, variables, inherit table, function table, variable table).
+- inherit_s: mapping from child to parent program with function/variable index offsets.
+- svalue_t: tagged union for LPC values (numbers, strings, objects, arrays, mappings).
+- function_t / function_entry: metadata for functions (name, type, offset, num_args, num_locals).
+- call_context: VM call frame storing pc, fp, sp, previous object, and function metadata.
+
+Minimal object_s layout (pattern)
+typedef struct object_s {
+    struct object_s *next_all;
+    struct object_s *prev_all;
+    struct program_s *prog;           // compiled program
+    struct object_s *super;           // parent in inherit chain (optional)
+    struct object_s *next_hashed;
+    struct object_s *next_clean;
+    unsigned short flags;             // O_HEART_BEAT, O_DESTRUCTED, O_SWAPPED, O_CLONE, O_LOADING
+    unsigned short ref;               // refcount
+    long time_of_ref;                 // for swap/clean
+    long load_time;                   // driver timestamp
+    svalue_t *variables;              // per-object variable storage
+    char *name;                       // canonical object path without .c
+} object_t;
+
+program_s layout (pattern)
+typedef struct program_s {
+    char *name;
+    int ref;
+    int heart_beat;                   // index of heart_beat function or -1
+    int num_functions_defined;
+    int num_variables_defined;
+    int num_strings;
+    int num_inherits;
+    struct inherit_s *inherit;        // inherit table
+    struct function_s *functions;     // function table
+    struct variable_s *variables;     // variable table
+    char **strings;                   // string table
+    unsigned char *program;           // bytecode stream
+    int program_size;
+} program_t;
+
+inherit_s layout (offset based)
+typedef struct inherit_s {
+    program_t *prog;                  // inherited program
+    int variable_index_offset;        // offset into child variable table
+    int function_index_offset;        // offset into child function table
+    int inherit_depth;                // depth for linearization
+} inherit_t;
+
+Object lifecycle (loader)
+- find_object(path): normalize path, strip trailing .c, search hash table.
+- load_object(path):
+  1) check hash; if exists and not destructed return.
+  2) parse/compile to program_t (may be cached).
+  3) allocate object_t, init flags=O_LOADING, ref=1.
+  4) allocate variables sized for program->num_variables_defined + inherited offsets.
+  5) link to global object list and hash bucket.
+  6) call apply_create(object, 0) once loaded.
+  7) clear O_LOADING.
+- clone_object(proto): copy program pointer, allocate variables, set O_CLONE, run apply_create with arglist.
+- destruct_object(obj): set O_DESTRUCTED, remove heart_beat, unlink, free variables if ref==0.
+
+Reference management
+- add_ref(obj, tag) increments ref; assert ref < MAX_SHORT_REF.
+- free_object(obj, from) decrements; when ref reaches 0 free program if ref==0 and not shared.
+- Every push_object on stack requires DECREF after pop if ownership transferred.
+
+Variable storage rules
+- Variables flattened using inherit offsets: child variables start after parent offset.
+- Access variable by slot index = base_index + inherit_offset.
+- When cloning, variables are zeroed; strings/maps/arrays are set to const0u to avoid leaks.
+
+Function lookup (method dispatch)
+- Entry point: apply_low(fn, ob, current, num_arg, where)
+  * ob: target object
+  * current: previous_object
+  * where: ORed flags (ORIGIN_DRIVER, ORIGIN_EFUN, ORIGIN_INTERNAL)
+- Steps:
+  1) Resolve function index using find_function_entry(ob->prog, fn, &inherit_depth, &func_index).
+  2) If not found and ob->prog->inherit not empty, walk inherits depth-first.
+  3) If still not found, query master_object->apply_function_not_found.
+  4) Enforce visibility: if function is private/protected and caller not allowed, raise error.
+  5) Prepare call frame (setup_new_frame): push previous_object/current_object, push control stack frame, set pc.
+  6) Execute via VM starting at function->offset in program bytecode.
+
+Function table entry (pattern)
+typedef struct function_s {
+    unsigned short flags;             // TYPE_MOD_PRIVATE, TYPE_MOD_PROTECTED, TYPE_MOD_STATIC
+    unsigned short num_local;
+    unsigned short num_arg;
+    unsigned short inherited;         // index into inherit table or 0xFFFF
+    unsigned short offset;            // bytecode offset within program
+    char *name;
+} function_t;
+
+Visibility rules
+- TYPE_MOD_PRIVATE: callable only from same object or inherits; otherwise function_not_found.
+- TYPE_MOD_PROTECTED: callable from inherits; disallow external objects unless privileged.
+- TYPE_MOD_STATIC: callable only from object itself; not visible to others.
+- TYPE_MOD_VARARGS: indicates runtime arg list; ensure stack prep matches num_arg.
+
+CALL_METHOD opcode (VM dispatch)
+- Stack convention before CALL_METHOD:
+  * sp[-argc]..sp[-1] = arguments (left-to-right push order)
+  * sp[-argc-1] = function name string or function index (depending on driver)
+  * sp[-argc-2] = target object
+- Execution steps:
+  1) Pop target object and function id.
+  2) If target is destructed => throw error or return 0 based on origin.
+  3) Resolve program/function via find_function_entry.
+  4) Build frame: push previous_object, change current_object to target.
+  5) Jump to callee bytecode offset; on return, restore frame and push return value.
+- Error handling: if function missing and origin allows simul_efun or master fallback, delegate.
+
+VM bytecode fragments for CALL_METHOD
+- Example emission for foo->bar(a, b):
+  codegen_emit_op(cg, OP_PUSH_STRING); // "bar"
+  codegen_emit_arg(cg, intern_string("bar"));
+  codegen_emit_op(cg, OP_PUSH_OBJECT); // foo
+  codegen_emit_arg(cg, sym_object);
+  codegen_emit_op(cg, OP_PUSH_LOCAL);  // a
+  codegen_emit_arg(cg, idx_a);
+  codegen_emit_op(cg, OP_PUSH_LOCAL);  // b
+  codegen_emit_arg(cg, idx_b);
+  codegen_emit_op(cg, OP_CALL_METHOD);
+  codegen_emit_arg(cg, 2); // argc
+
+Opcode set extension (object aware)
+enum OpCode {
+    OP_CALL_METHOD,          // dynamic dispatch, target object + name on stack
+    OP_CALL_OTHER,           // string path resolution + method
+    OP_SUPER_CALL,           // call inherited implementation using inherit depth
+    OP_PUSH_OBJECT,          // push object reference
+    OP_NEW_OBJECT,           // clone or load object
+    OP_DESTRUCT_OBJECT,      // destruct
+    OP_INHERIT_RESOLVE,      // resolve inherited var/function offset
+    OP_PUSH_THIS_OBJECT,     // push current object
+    OP_PUSH_PREV_OBJECT,     // push previous_object
+    OP_PUSH_GLOBAL_OBJECT,   // preloaded object reference
+    OP_RETURN,               // existing opcode, ensure object decref on unwind
+    OP_CATCH,                // exception handling, resets object state
+};
+
+Inheritance resolution algorithm
+- find_function_entry(prog, name):
+  * for i in 0..prog->num_functions_defined: compare name.
+  * if found and flags not TYPE_MOD_PRIVATE relative to caller => return index.
+  * else iterate inherits:
+    - maintain cumulative function_offset.
+    - call recursively with inherit.prog; if found return index + inherit_offset.
+- find_variable: similar but uses variable_index_offset.
+- super call: OP_SUPER_CALL passes requested inherit depth to skip current program and look into parent.
+
+apply hooks (object lifecycle)
+- apply_create(obj, num_arg): invoked after load/clone. Called only once per object.
+- apply_reset(obj): scheduled by reset_driver over time slices; must guard against destructed objects.
+- apply_clean_up(obj): optional; invoked when object not referenced except environment.
+- apply_heart_beat(obj): if flag O_HEART_BEAT set; called every heartbeat tick when interactive or active.
+- apply_init(obj): called when object enters environment; used for room enter/exit logic.
+
+Environment and containment
+- object_t has environment pointer (not shown above) for room hierarchy.
+- move_object(obj, dest):
+  * check for same env -> no-op
+  * call apply_init on dest and contents
+  * adjust linked lists for inventory
+  * update living object tables if interactive
+- deep_inventory: DFS traversal used by efuns like present(), first_inventory().
+
+Path resolution and load_object
+- valid_object(path): master hook to validate load/clone.
+- find_object: hash by name; names are canonical without .c and without leading "/".
+- load_object: call compile_file; attach program; run create.
+- reload_object(obj): recompile, swap program pointer, migrate variables using variable mapping table.
+
+Simul_efun / master fallbacks
+- If function not found and master provides valid_apply, call master->function_not_found(target, name, args).
+- simul_efun_object: searched before master for missing functions.
+- call_other with string path uses master to find object and validate permissions.
+
+Property management
+- use mappings for properties; store on object variables or property table keyed by string.
+- get_property(obj, name): search variable mapping; fallback to environment.
+- set_property(obj, name, value): ensure write access; update mapping.
+- remove_property(obj, name): delete from mapping.
+
+Runtime flags (common)
+- O_HEART_BEAT: heart_beat scheduled.
+- O_INTERACTIVE: has user.
+- O_CLONE: clone vs blueprint.
+- O_DESTRUCTED: destructed marker.
+- O_SWAPPED: swapped to disk.
+- O_WILL_CLEAN_UP: flagged for cleanup call.
+
+Heart beat scheduler
+- driver maintains heartbeat_list; each entry references object and function index.
+- every tick: iterate list, skip destructed/swapped objects, call function via VM.
+- exceptions: if error in heart_beat, remove heartbeat and maybe destruct object.
+
+Clean up strategy
+- clean_up is called when refcount low and no interactive users.
+- master->valid_clean_up decides whether to allow.
+- If clean_up returns 1, object stays; 0 triggers destruct after next check.
+
+Object swapping (optional)
+- swapout(obj): serialize variables to swap file when memory pressure high.
+- swapin(obj): reload variables before execution; set O_SWAPPED flag accordingly.
+
+Stack frame layout for CALL_METHOD
+- Before call: sp points after last argument.
+- push_control_stack(code)
+- setup_new_frame:
+  * csp->funstart = function->offset;
+  * csp->current_object = ob;
+  * csp->prev_ob = previous_object;
+  * csp->fp = sp - argc; // start of locals
+  * csp->num_local = function->num_local;
+- After return: pop_control_stack(); restore previous_object.
+
+Error handling patterns
+- error handler uses longjmp; ensure refcounts decremented on unwind.
+- catch/throw implemented via OP_CATCH and exception frames storing sp/fp/ob.
+- apply_error: master hook for runtime errors.
+
+Efun integration (object aware)
+- efun call_other(obj|string, func, ...):
+  * if string path -> find_object, load if missing.
+  * perform privilege check valid_call();
+  * dispatch via apply_low.
+- efun environment(obj): returns obj->environment.
+- efun children(file): returns array of clones whose base name matches file.
+- efun deep_inventory(obj): DFS into inventories.
+- efun filter_objects(list, fun): uses CALL_METHOD internally for callbacks.
+
+Bytecode emission patterns for objects
+- Member access: obj->var
+  * push object
+  * resolve variable index with inherit offset
+  * emit OP_PUSH_OBJECT_VAR index
+- Assignment: obj->var = expr
+  * evaluate expr
+  * push obj
+  * emit OP_STORE_OBJECT_VAR index
+- Inheritance super call: ::foo()
+  * emit OP_SUPER_CALL depth, argc
+
+Sample bytecode for inheritance-aware method
+// function foo(int x, int y) { return ::bar(x) + y; }
+codegen_emit_op(cg, OP_PUSH_LOCAL); codegen_emit_arg(cg, idx_x);
+codegen_emit_op(cg, OP_SUPER_CALL); codegen_emit_arg(cg, make_super_id("bar", depth)); codegen_emit_arg(cg, 1);
+codegen_emit_op(cg, OP_PUSH_LOCAL); codegen_emit_arg(cg, idx_y);
+codegen_emit_op(cg, OP_BINARY_ADD);
+codegen_emit_op(cg, OP_RETURN);
+
+Memory safety checklist
+- Never access variables when O_DESTRUCTED set.
+- After destruct, clear heart_beat and inventory links.
+- Use push_object for stack values; DECREF after pop when owning.
+- For strings/maps/arrays, use ref increments on assignment.
+
+apply_create typical pattern
+void apply_create(object_t *ob) {
+    if (ob->flags & O_CLONE) {
+        /* clone-specific init */
+    }
+    // call LPC create() via VM
+    int idx = find_function_entry(ob->prog, "create", NULL, NULL);
+    if (idx >= 0) {
+        setup_new_frame(ob, idx, 0);
+        vm_execute(ob->prog, function_offset(idx));
+    }
+}
+
+Master object hooks to call
+- valid_object(path)
+- valid_read(file, user, func)
+- valid_write(file, user, func)
+- valid_seteuid(ob, euid)
+- privilege_violation(op, who, what, how)
+- query_allow_shadow(ob)
+
+Shadowing rules
+- Shadows wrap target object by replacing function lookup; disable for sensitive objects.
+- ensure valid_shadow(target, shadow)
+- maintain shadow chain: ob->shadowing / ob->shadowed_by.
+
+Driver tables relevant to objects
+- obj_list: global list of all objects; supports iteration for shutdown.
+- living hash: maps player names to object pointers for find_living.
+- heart_beat list: used by heartbeat scheduler.
+
+Object rebuild (swap program)
+- when recompiling an object with active clones:
+  * build variable mapping table old->new
+  * migrate variables using offsets, default missing to 0
+  * update function index mapping for shadow/heart_beat
+  * swap program pointer on all clones
+
+call_out scheduling
+- call_out table stores (when, func, ob, args).
+- tick handler: while (now >= next_call_out.time) pop entry, verify object exists, call function via VM.
+- If object destructed, drop entry.
+
+apply_reset pattern
+void reset_object(object_t *ob) {
+    if (ob->flags & O_DESTRUCTED) return;
+    int idx = find_function_entry(ob->prog, "reset", NULL, NULL);
+    if (idx >= 0) {
+        setup_new_frame(ob, idx, 0);
+        vm_execute(ob->prog, function_offset(idx));
+    }
+}
+
+Error messages to maintain
+- "call_other on destructed object"
+- "function not found"
+- "privilege violation"
+- "too deep recursion in inheritance"
+
+Guard against recursion depth
+- Limit call stack depth (MAX_CALL_DEPTH). If exceeded, raise error and unwind frames.
+- Maintain eval_cost; charge per instruction; abort if limit exceeded.
+
+Driver entry points for object system
+- apply_master_ob: used during driver boot to load master object.
+- preload_objects: reads list from master->epilog() and loads sequentially.
+- shutdown sequence: heart_beat off, call clean_up on remaining objects, destruct all.
+
+Testing checklist (object system)
+- Dispatch: foo->bar() resolves inherited bar.
+- Access: inherited variable offsets correct after reload.
+- Security: private function not callable externally.
+- clean_up: objects without references destructed.
+- heart_beat: stops after destruct or when master disables.
+- call_out: canceled when object destructed.
+- shadowing: valid_shadow enforced; shadows removed on destruct.
+- cloning: clone inherits heart_beat flag from blueprint when set.
+
+VM execution loop snippet (object aware)
+while (1) {
+    switch (*pc++) {
+    case OP_CALL_METHOD: {
+        int argc = *pc++;
+        svalue_t func = *(sp - argc - 1);
+        svalue_t objv = *(sp - argc - 2);
+        object_t *ob = objv.u.ob;
+        if (!ob || (ob->flags & O_DESTRUCTED)) error("call_method on destructed object");
+        int fi = find_function_by_id(ob->prog, func);
+        if (fi < 0) handle_function_not_found(ob, func);
+        setup_call_frame(ob, fi, argc);
+        break;
+    }
+    case OP_SUPER_CALL: {
+        int depth = *pc++;
+        int argc = *pc++;
+        resolve_super_call(current_object, depth, argc);
+        break;
+    }
+    case OP_PUSH_OBJECT: {
+        int idx = *pc++;
+        push_object(object_table[idx]);
+        break;
+    }
+    case OP_DESTRUCT_OBJECT: {
+        int idx = *pc++;
+        object_t *ob = object_table[idx];
+        if (ob) destruct_object(ob);
+        push_number(0);
+        break;
+    }
+    default:
+        dispatch_vm_common(pc[-1]);
+    }
+}
+
+Object hashing (find_object)
+- hash = whashstr(name) & (HTABLE_SIZE-1).
+- buckets store singly linked list; collisions resolved by chaining.
+- names stored without .c, lowercase; builder should normalize queries the same way.
+
+Method cache (optional)
+- cache key: (object pointer, function id).
+- cache value: bytecode offset + inherit depth.
+- invalidate cache on object reload or program free.
+
+Efun hooks to prefer
+- function_exists(function, object)
+- inherits(file, obj)
+- interactive(obj)
+- set_heart_beat(flag)
+- set_light, query_light for rooms
+
+Driver config knobs for objects
+- max_eval_cost per tick
+- max_call_depth
+- swap_threshold (memory pages)
+- cleanup_delay
+
+Object flags transitions
+- After load: flags = O_LOADING -> clear -> maybe set O_HEART_BEAT
+- After destruct: flags |= O_DESTRUCTED; remove from lists; ref may stay >0 until stack clears.
+- After swap: flags |= O_SWAPPED; clear when swapped in.
+
+Inventory traversal utilities
+- first_inventory(obj): returns first child in inventory linked list.
+- next_inventory(item): returns next sibling.
+- deep_inventory(obj): depth-first using stack to avoid recursion.
+
+Privileges and efun gating
+- valid_read/write for file operations
+- valid_seteuid before changing effective uid
+- For simul_efun and master calls, enforce privilege_violation hook.
+
+Bytecode size guidance
+- Keep CALL_METHOD and CALL_OTHER small; push only required operands.
+- Use OP_PUSH_THIS_OBJECT instead of loading globals when possible.
+- Combine CONST tables for strings and function ids to reduce footprint.
+
+AST to bytecode for object access
+case NODE_MEMBER: // obj->member
+    codegen_expr(cg, node->left);
+    codegen_emit_op(cg, OP_MEMBER_REF);
+    codegen_emit_arg(cg, resolve_member_id(node->member));
+    break;
+
+Reload safety
+- During reload, block heart_beat and call_outs temporarily.
+- Use swap variable table mapping to avoid corrupting inherited variables.
+
+Examples of function lookup with inherit offsets
+int find_function_entry(program_t *prog, const char *name, inherit_t **inherit_out) {
+    for (int i = 0; i < prog->num_functions_defined; i++) {
+        if (strcmp(prog->functions[i].name, name) == 0) {
+            *inherit_out = NULL;
+            return i;
+        }
+    }
+    for (int i = 0; i < prog->num_inherits; i++) {
+        inherit_t *inh = &prog->inherit[i];
+        int idx = find_function_entry(inh->prog, name, inherit_out);
+        if (idx >= 0) {
+            *inherit_out = inh;
+            return idx + inh->function_index_offset;
+        }
+    }
+    return -1;
+}
+
+Common pitfalls to avoid
+- Re-emitting interpreter switch(opcode) inside codegen; must emit bytecode.
+- Forgetting to restore previous_object after CALL_METHOD.
+- Skipping reference increments when storing object into svalue.
+- Not handling destructed targets in call_other/call_method.
+- Misaligned variable offsets when inheritance changes.
+
+Object system validation checklist
+- header compliance: vm.h, object.h, codegen.h present.
+- bytecode coverage: CALL_METHOD, OP_PUSH_OBJECT, OP_SUPER_CALL used appropriately.
+- inheritance: super calls respected; depth passed.
+- ref counts: add_ref/free_object symmetry.
+- security: calls flow through master hooks.
+- efuns: call_other respects privilege_violation; children() uses inventory walk.
+- tests: driver unit tests for lookup, clone, destruct.
+
+Inline helper patterns
+static inline int is_destructed(object_t *ob) { return ob == NULL || (ob->flags & O_DESTRUCTED); }
+static inline void safe_add_ref(object_t *ob) { if (ob) ob->ref++; }
+static inline void safe_free_object(object_t *ob) { if (ob) free_object(ob, "free"); }
+
+Heart beat flag maintenance
+- set_heart_beat(ob, 1): add to hb list, set flag.
+- set_heart_beat(ob, 0): remove from hb list, clear flag.
+- guard: if ob is swapped, swap in before heart_beat call.
+
+Object metrics to log (for debugging)
+- total objects, clones, blueprints
+- average refcount
+- heartbeat queue length
+- swap activity
+- call_out queue length
+
+Sample debug print
+void dump_object(object_t *ob) {
+    printf("[OBJ] %s ref=%d flags=%x prog=%s\n",
+        ob->name, ob->ref, ob->flags,
+        ob->prog ? ob->prog->name : "<null>");
+}
+
+Master-driven access checks
+- valid_link(src, dest)
+- valid_hide(obj)
+- valid_object(path)
+- valid_shadow(shadower, target)
+- valid_override(fun)
+
+Object path normalization
+- collapse sequences like /foo/../bar
+- remove trailing .c
+- ensure leading slash
+- store canonical form in object_t.name
+
+Data structures for inventory
+struct object_s {
+    struct object_s *super;
+    struct object_s *contains;        // first child
+    struct object_s *next_inv;        // sibling
+};
+
+move_object core steps
+1) if obj == dest or dest == obj->super -> return
+2) if obj has heart_beat and dest destructed -> error
+3) unlink obj from current inventory list
+4) link obj into dest->contains front
+5) call add_weight/update_light as needed
+6) call apply_init for dest and object contents
+
+Efuns requiring object system
+- living() uses living hash and object->flags.
+- move_object() uses inventory manipulation.
+- present(str, env) scans inventory and living table.
+- deep_inventory() uses stack to avoid recursion overflow.
+- users() returns list of interactive objects (O_INTERACTIVE flag).
+
+Opcode emission for efun callbacks
+- filter(array, func): push closure, iterate, CALL_METHOD per element.
+- map_mapping(map, func): iterate key/value pairs, CALL_METHOD for transform.
+
+Recap for codegen templates
+- Always emit OP_CALL_METHOD for method dispatch; never inline interpreter logic.
+- Use OP_SUPER_CALL when AST node indicates ::foo.
+- Use OP_PUSH_THIS_OBJECT for implicit this in method bodies.
+- Protect against destructed objects before calls.
+
+End of object system template.

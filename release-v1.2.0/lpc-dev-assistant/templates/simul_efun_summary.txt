@@ -1,0 +1,29 @@
+Simul_efun summary
+
+Role:
+- Manages simul_efun functions by keeping two mappings:
+  1) a sorted name -> index table for compile-time binary search
+  2) an index -> function array for fast runtime dispatch
+
+Key behaviors:
+- Preserves runtime indices across updates so callers can rely on stable indices.
+- Updates identifier metadata (tokens, sem_value, dn.simul_num) when adding/removing functions.
+- Refcounts the simul_efun object and handles load/unload via `set_simul_efun` / `init_simul_efun`.
+
+Important points for driver design / prompts:
+- Keep simul_efun indices stable between updates.
+- Maintain a sorted shared-string list of names for O(log n) lookup at compile time.
+- Use an index->function table at runtime for O(1) dispatch.
+- When unloading, mark identifiers orphaned and decrement semantic counters as needed.
+
+Representative snippet (extracted from simul_efun.c):
+
+static void
+find_or_add_simul_efun(function_t *funp, int runtime_index) {
+    /* binary-search on simul_names (sorted shared strings); if found, update
+       identifier tokens and assign simuls[index].func = funp; otherwise insert */
+}
+
+Usage guidance for prompt augmentation:
+- Provide this summary when asking the LLM to implement or refactor simul_efun support.
+- Include the snippet and notes about stable indices and identifier metadata updates.

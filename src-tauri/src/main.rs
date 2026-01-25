@@ -225,7 +225,14 @@ fn list_models() -> Result<Vec<String>, String> {
 #[tauri::command]
 async fn check_ollama_available() -> Result<bool, String> {
     let client = OllamaClient::new().map_err(|e| e.to_string())?;
-    Ok(client.list_models().await.is_ok())
+    match client.list_models().await {
+        Ok(models) => {
+            // Check if required model is available
+            let required_model = "qwen2.5-coder:3b";
+            Ok(models.iter().any(|m| m.contains(required_model)))
+        }
+        Err(_) => Ok(false)
+    }
 }
 
 #[tauri::command]
@@ -265,7 +272,16 @@ fn check_ollama_health() -> Result<serde_json::Value, String> {
     let client = OllamaClient::new().map_err(|e| e.to_string())?;
     let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     match rt.block_on(async { client.list_models().await.map_err(|e| e.to_string()) }) {
-        Ok(models) => Ok(serde_json::json!({"ok": true, "models": models})),
+        Ok(models) => {
+            let required_model = "qwen2.5-coder:3b";
+            let has_required = models.iter().any(|m| m.contains(required_model));
+            Ok(serde_json::json!({
+                "ok": true,
+                "models": models,
+                "has_required_model": has_required,
+                "required_model": required_model
+            }))
+        }
         Err(e) => Err(e),
     }
 }
