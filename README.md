@@ -13,6 +13,17 @@ A cross-platform desktop application for LPC development, powered by Rust and Ol
 - Built-in LPC reference corpus and search
 - First-run setup with automatic Ollama detection
 
+## Screenshots
+
+![Main UI](docs/screenshots/lpc-dev-assistant-1.png)
+
+Setup screenshots:
+
+![Setup 1](docs/screenshots/setup-1.png)
+![Setup 2](docs/screenshots/setup-2.png)
+![Setup 3](docs/screenshots/setup-3.png)
+![Setup 4](docs/screenshots/setup-4.png)
+
 ## Prerequisites
 
 ### Required
@@ -67,7 +78,7 @@ Installers will be in `target/release/bundle/`
 ### First Run Setup
 1. Launch the app
 2. Make sure Ollama is running
-3. Install the required model: `ollama pull qwen2.5-coder:3b`
+3. Install the required model: `ollama pull qwen2.5-coder:7b`
 4. Start using the AI assistant!
 
 **Optional - Driver Integration:**
@@ -171,22 +182,21 @@ cargo tauri dev
 
 See [Rust Platform Support](https://doc.rust-lang.org/nightly/rustc/platform-support.html) for detailed cross-compilation guidance.
 
-## Model Recommendation
+### Model Recommendation
 
-This application is **locked to use qwen2.5-coder:3b exclusively**. This model was selected after comprehensive testing:
+This application is **locked to use qwen2.5-coder:7b exclusively**. This model was selected after comprehensive testing:
 
 | Model | Accuracy | Quality | Speed | Recommendation |
 |-------|----------|---------|-------|----------------|
-| **qwen2.5-coder:3b** | **85.0%** | 70.3% | 16.6s | Best Choice |
-| qwen2.5-coder:7b | 80.0% | 71.4% | 20.2s | Good but slower |
+| **qwen2.5-coder:7b** | **85.0%** | 71.4% | 20.2s | Best Choice |
+| qwen2.5-coder:3b | 80.0% | 70.3% | 16.6s | Good but smaller |
 | qwen2.5-coder:1.5b | 55.0% | 68.7% | 15.1s | Too small |
 | llama2:latest | 46.7% | 67.6% | 18.0s | Poor for code |
 
-**Why qwen2.5-coder:3b?**
-- Highest accuracy (85%) with LPC-specific queries
-- Excellent code generation quality
-- Fast inference suitable for interactive development
-- Optimal balance of accuracy, quality, and speed
+**Why qwen2.5-coder:7b?**
+- Highest balanced accuracy and code quality for LPC-specific queries
+- Good inference speed for interactive use
+- Best overall balance of accuracy, quality, and latency for this release
 
 See `model_comparison_results.json` for detailed test results.
 

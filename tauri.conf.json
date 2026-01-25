@@ -1,6 +1,6 @@
 {
   "productName": "LPC Dev Assistant",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "identifier": "com.lpc-dev-assistant",
   "build": {
     "beforeDevCommand": "",

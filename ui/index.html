@@ -354,9 +354,9 @@
         <div class="tag">Markdown rendering, model controls, RAG preview</div>
       </div>
     </div>
-    <div class="controls">
+      <div class="controls">
       <div class="status" id="conn-status"><span class="dot"></span><span id="status-text">Connecting…</span></div>
-      <span class="pill">Model: qwen2.5-coder:3b</span>
+      <span class="pill">Model: qwen2.5-coder:7b</span>
     </div>
   </header>
 
@@ -429,7 +429,7 @@
         </div>
       </div>
       <div class="chip-row" id="meta-row">
-        <span class="chip" id="meta-model">Model: qwen2.5-coder:3b</span>
+        <span class="chip" id="meta-model">Model: qwen2.5-coder:7b</span>
         <span class="chip" id="meta-latency">Latency: -</span>
       </div>
       <div class="response">
@@ -607,7 +607,7 @@
     })();
 
     // Required model for LPC Development Assistant
-    const REQUIRED_MODEL = 'qwen2.5-coder:3b';
+    const REQUIRED_MODEL = 'qwen2.5-coder:7b';
 
     const state = {
       currentModel: REQUIRED_MODEL,
@@ -783,7 +783,7 @@
     }
 
     async function loadModels() {
-      // Verify qwen2.5-coder:3b is available
+      // Verify qwen2.5-coder:7b is available
       try {
         const models = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('get_available_models');
         if (!models.includes(REQUIRED_MODEL)) {
@@ -994,7 +994,7 @@
         navigator.clipboard.writeText(text);
         toast('Response copied');
       });
-      // Model is locked to qwen2.5-coder:3b - removed refresh and selection listeners
+      // Model is locked to qwen2.5-coder:7b - removed refresh and selection listeners
       document.getElementById('stop-btn').addEventListener('click', stopGeneration);
       document.getElementById('question').addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();
