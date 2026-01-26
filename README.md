@@ -36,13 +36,72 @@ Setup screenshots:
 
 ## Installation
 
-### Quick Install (Pre-Built)
-**Download from [GitHub Releases](https://github.com/Thurtea/lpc-development-assistant/releases):**
+### Windows
 
-#### Windows
-Download `LPC Dev Assistant_0.1.0_x64_en-US.msi` and run the installer.
+Download the latest installer from [Releases](https://github.com/Thurtea/lpc-development-assistant/releases/latest):
+
+**Latest: v1.2.0 - January 26, 2026**
+- **File**: LPC Dev Assistant_1.2.0_x64_en-US.msi (20.3 MB)
+- **SHA256**: `2A9E90BEE4ED03EB584557B6E6179652B2C5480B4D614F1090862E5BD4344AE1`
+
+Installation Steps:
+1. Download the MSI installer
+2. Double-click to run the installer
+3. Follow the installation wizard
+4. Launch from Start Menu or desktop shortcut
+
+Requirements:
+- Windows 10/11 (64-bit)
+- 500 MB free disk space
+- Optional: Windows Subsystem for Linux (WSL) 2 for driver integration
 
 #### macOS
+Download `.dmg` file and drag the app to Applications.
+
+Supports both Intel (x86_64) and Apple Silicon (aarch64).
+
+#### Linux
+Download `.AppImage` or `.deb` file from releases.
+
+### WSL Configuration (Optional)
+
+If you want to use the "Driver Integration" features:
+
+1. Install WSL:
+   ```powershell
+   wsl --install
+   ```
+
+2. On first launch, configure WSL paths in the **Settings** tab:
+   - **Driver Root**: /home/YOUR_USERNAME/amlp-driver
+   - **Library Root**: /home/YOUR_USERNAME/amlp-library
+
+3. Verify WSL is working:
+   ```bash
+   wsl --status
+   ```
+
+### Ollama Setup
+
+For AI code generation features:
+
+1. **Install Ollama**:
+   - Download from [ollama.ai](https://ollama.ai)
+   - Or: `brew install ollama` (macOS)
+
+2. **Start Ollama**:
+   ```bash
+   ollama serve
+   ```
+
+3. **Pull the recommended model**:
+   ```bash
+   ollama pull qwen2.5-coder:7b
+   ```
+
+4. The application will auto-detect Ollama on startup
+
+### macOS
 Download `.dmg` file and drag the app to Applications.
 
 Supports both Intel (x86_64) and Apple Silicon (aarch64).
