@@ -105,7 +105,7 @@ pub fn efuns_json(root: &str) -> Result<Vec<(String, String)>, String> {
     Ok(results)
 }
 
-fn main() {
+fn _main() {
     let args: Vec<String> = env::args().collect();
     let root = args.get(1).map(|s| s.as_str()).unwrap_or("E:/Work/AMLP/mud-references/merentha/merentha_fluffos_v2/fluffos-2.9-ds2.03");
     match efuns_json(root) {

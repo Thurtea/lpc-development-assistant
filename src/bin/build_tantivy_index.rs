@@ -1,13 +1,13 @@
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::path::PathBuf;
+// PathBuf not needed explicitly
 
 use serde_json::Value;
 use tantivy::directory::MmapDirectory;
 use tantivy::schema::*;
 use tantivy::Index;
-use tantivy::{doc, Document};
+use tantivy::doc;
 
 fn main() -> io::Result<()> {
     let cwd = env::current_dir()?;
@@ -29,11 +29,11 @@ fn main() -> io::Result<()> {
     let schema = schema_builder.build();
 
     let index_path = base.join("index_tantivy");
-    let _dir = std::fs::create_dir_all(&index_path).map(|_| ())?;
-    let mmap_dir = MmapDirectory::open(&index_path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    let index = Index::open_or_create(mmap_dir, schema.clone()).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    std::fs::create_dir_all(&index_path)?;
+    let mmap_dir = MmapDirectory::open(&index_path).map_err(io::Error::other)?;
+    let index = Index::open_or_create(mmap_dir, schema.clone()).map_err(io::Error::other)?;
 
-    let mut writer = index.writer(50_000_000).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let mut writer = index.writer(50_000_000).map_err(io::Error::other)?;
 
     let f = File::open(&jsonl)?;
     let reader = BufReader::new(f);
@@ -64,9 +64,9 @@ fn main() -> io::Result<()> {
                 if let Some(text) = v.get("text").and_then(|x| x.as_str()) {
                     doc.add_text(text_field, text);
                 }
-                writer.add_document(doc);
+                let _ = writer.add_document(doc);
                 count += 1;
-                if count % 5000 == 0 {
+                if count.is_multiple_of(5000) {
                     println!("Indexed {} documents...", count);
                 }
             }
@@ -74,7 +74,7 @@ fn main() -> io::Result<()> {
         }
     }
 
-    writer.commit().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    writer.commit().map_err(io::Error::other)?;
     println!("Tantivy index built: {} documents indexed", count);
     Ok(())
 }

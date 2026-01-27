@@ -5,6 +5,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Event payloads preserved for future streaming functionality
 pub enum CommandEvent {
     StdoutLine(String),
     StderrLine(String),
@@ -24,6 +25,7 @@ pub struct WslExecutor {
     pub timeout: Option<Duration>,
 }
 
+#[allow(dead_code)] // Methods preserved for future timeout and configuration features
 impl WslExecutor {
     pub fn new(workdir: impl Into<String>) -> Self {
         WslExecutor {

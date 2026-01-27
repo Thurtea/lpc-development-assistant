@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports, deprecated, clippy::all)]
+
 pub mod ollama_client;
 pub mod context_manager;
 pub mod prompt_builder;

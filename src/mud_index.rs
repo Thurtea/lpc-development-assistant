@@ -76,7 +76,7 @@ impl MudReferenceIndex {
             for term in terms {
                 term_index
                     .entry(term)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push((path.to_path_buf(), line_idx));
             }
         }
@@ -177,10 +177,9 @@ impl MudReferenceIndex {
                             if is_efun_related && (query_lower.contains("efun") || query_lower.contains("call_out") || query_lower.contains("simul")) {
                                 weighted_score += 0.15;
                             }
-                            if query_lower.contains("call_method") || query_lower.contains("call other") {
-                                if path_lower.contains("call") || path_lower.contains("method") {
-                                    weighted_score += 0.1;
-                                }
+                            if (query_lower.contains("call_method") || query_lower.contains("call other"))
+                                && (path_lower.contains("call") || path_lower.contains("method")) {
+                                weighted_score += 0.1;
                             }
                             candidates.push((path.to_path_buf(), line_idx, weighted_score));
                         }
@@ -216,7 +215,7 @@ impl MudReferenceIndex {
         }
         
         // Process prioritized (driver sources) first, then others
-        for items in vec![prioritized, other] {
+        for items in [prioritized, other] {
             for (path, line_idx, score) in items {
                 if seen_files.contains(path) && results.len() >= limit {
                     continue;
@@ -279,16 +278,13 @@ impl MudReferenceIndex {
     }
 
     fn is_code_file(path: &Path) -> bool {
-        match path.extension().and_then(|s| s.to_str()) {
-            Some("c") | Some("h") | Some("lpc") | Some("y") | Some("txt") | Some("md") | Some("json") | Some("jsonl") => true,
-            _ => false,
-        }
+        matches!(path.extension().and_then(|s| s.to_str()), Some("c") | Some("h") | Some("lpc") | Some("y") | Some("txt") | Some("md") | Some("json") | Some("jsonl"))
     }
 
     fn extract_snippet(content: &str, q: &str, max_len: usize) -> String {
         let lc = content.to_lowercase();
         if let Some(idx) = lc.find(q) {
-            let start = if idx > max_len / 4 { idx - max_len / 4 } else { 0 };
+            let start = idx.saturating_sub(max_len / 4);
             let end = std::cmp::min(start + max_len, content.len());
             let mut s = content[start..end].to_string();
             if end < content.len() {

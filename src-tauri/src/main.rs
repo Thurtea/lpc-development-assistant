@@ -6,8 +6,9 @@ use std::process::Command;
 use std::thread;
 use std::time::Duration;
 use serde::Serialize;
+// unused imports removed to satisfy clippy
 
-use tauri::{Window, Manager, AppHandle};
+use tauri::{Window, Manager};
 use tauri::Emitter;
 
 use lpc_dev_assistant::{OllamaClient, ContextManager, PromptBuilder, MudReferenceIndex};
@@ -15,10 +16,12 @@ use lpc_dev_assistant::{OllamaClient, ContextManager, PromptBuilder, MudReferenc
 mod wsl;
 mod driver;
 mod config;
+mod commands;
 
 use driver::pipeline::{CompileResult, RunResult, DriverPipeline};
 use wsl::PathMapper;
 use crate::config::{DriverConfig, load_driver_config, save_driver_config};
+use commands::file_operations::{save_to_driver, save_to_library};
 
 #[derive(Debug, Serialize)]
 struct ComponentDiagnostic {
@@ -99,6 +102,7 @@ fn mark_setup_complete(state: tauri::State<'_, AppState>) -> Result<(), String> 
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Tauri command parameters - cannot be easily refactored
 async fn ask_ollama(
     model: String,
     question: String,
@@ -147,6 +151,7 @@ async fn ask_ollama(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Tauri command parameters - cannot be easily refactored
 fn ask_ollama_stream(
     window: Window,
     model: String,
@@ -246,7 +251,7 @@ async fn start_ollama_service() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
         tokio::process::Command::new("cmd")
-            .args(&["/C", "start", "", "ollama", "serve"])
+            .args(["/C", "start", "", "ollama", "serve"])
             .spawn()
             .map_err(|e| e.to_string())?;
         Ok(true)
@@ -291,7 +296,7 @@ fn start_ollama() -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
         Command::new("cmd")
-            .args(&["/C", "start", "cmd", "/K", "ollama", "serve"])
+            .args(["/C", "start", "cmd", "/K", "ollama", "serve"])
             .spawn()
             .map_err(|e| format!("Failed to start Ollama: {}", e))?;
         // Give Ollama time to spin up, then retry connectivity a few times
@@ -381,6 +386,28 @@ fn save_response(filename: String, contents: String, state: tauri::State<'_, App
     let path = state.workspace_root.join(filename);
     std::fs::write(&path, contents).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+
+#[tauri::command]
+fn browse_wsl_directory(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
+    // Use rfd to present a folder picker and attempt to map selected folder to a WSL path
+    match rfd::FileDialog::new().pick_folder() {
+        Some(path) => {
+            if let Some(mapped) = state.path_mapper.to_wsl_driver(&path) {
+                return Ok(Some(mapped));
+            }
+            if let Some(mapped) = state.path_mapper.to_wsl_library(&path) {
+                return Ok(Some(mapped));
+            }
+            // If the selected path already looks like a WSL (starts with /), return as-is
+            if path.starts_with(std::path::Path::new("/")) {
+                return Ok(Some(path.display().to_string()));
+            }
+            Ok(Some(path.display().to_string()))
+        }
+        None => Ok(None),
+    }
 }
 
 #[tauri::command]
@@ -557,6 +584,119 @@ async fn validate_and_diagnose_wsl(config: DriverConfig) -> Result<WslDiagnostic
     }
 }
 
+// New Ollama Commands
+
+#[tauri::command]
+async fn check_ollama_installed() -> Result<bool, String> {
+    let output = tokio::process::Command::new("ollama")
+        .arg("--version")
+        .output()
+        .await;
+    
+    Ok(output.map(|o| o.status.success()).unwrap_or(false))
+}
+
+#[tauri::command]
+async fn check_ollama_running() -> Result<bool, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+        .map_err(|e| e.to_string())?;
+    
+    match client.get("http://localhost:11434/api/tags").send().await {
+        Ok(resp) => Ok(resp.status().is_success()),
+        Err(_) => Ok(false),
+    }
+}
+
+#[tauri::command]
+async fn start_ollama_server() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        tokio::process::Command::new("cmd")
+            .args(["/C", "start", "ollama", "serve"])
+            .spawn()
+            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        
+        Ok("Ollama server starting...".to_string())
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        tokio::process::Command::new("sh")
+            .args(&["-c", "ollama serve &"])
+            .spawn()
+            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        
+        Ok("Ollama server starting...".to_string())
+    }
+}
+
+#[tauri::command]
+async fn pull_ollama_model(model: String) -> Result<String, String> {
+    let output = tokio::process::Command::new("ollama")
+        .arg("pull")
+        .arg(&model)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to pull model: {}", e))?;
+    
+    if output.status.success() {
+        Ok(format!("Successfully pulled model: {}", model))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to pull model: {}", stderr))
+    }
+}
+
+#[tauri::command]
+async fn list_ollama_models() -> Result<Vec<String>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+    
+    let response = client
+        .get("http://localhost:11434/api/tags")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch models: {}", e))?;
+    
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+    
+    let models = json["models"]
+        .as_array()
+        .ok_or("Invalid response format")?
+        .iter()
+        .filter_map(|m| m["name"].as_str())
+        .map(|s| s.to_string())
+        .collect();
+    
+    Ok(models)
+}
+
+#[tauri::command]
+async fn setup_staging_directory() -> Result<String, String> {
+    // Determine staging directory path
+    let home_dir = dirs::home_dir().ok_or("Failed to get home directory")?;
+    let staging_dir = home_dir.join(".lpc-dev-assistant").join("staging");
+    
+    // Create staging directory
+    std::fs::create_dir_all(&staging_dir)
+        .map_err(|e| format!("Failed to create staging directory: {}", e))?;
+    
+    // Load config, update it, and save
+    let mut cfg = load_driver_config()?;
+    cfg.staging_directory = Some(staging_dir.to_string_lossy().to_string());
+    cfg.setup_complete = true;
+    save_driver_config(&cfg)?;
+    
+    Ok(format!("Staging directory created: {}", staging_dir.display()))
+}
+
 fn main() {
     eprintln!("Starting LPC Dev Assistant...");
 
@@ -648,6 +788,9 @@ fn main() {
             search_examples,
             search_references,
             save_response,
+            save_to_driver,
+            save_to_library,
+            browse_wsl_directory,
             get_setup_status,
             run_initial_setup,
             mark_setup_complete,
@@ -657,7 +800,17 @@ fn main() {
             test_driver_connection,
             get_driver_config,
             save_driver_config_cmd,
-            validate_and_diagnose_wsl
+            validate_and_diagnose_wsl,
+            check_ollama_installed,
+            check_ollama_running,
+            start_ollama_server,
+            pull_ollama_model,
+            list_ollama_models,
+            setup_staging_directory,
+            commands::staging::save_to_staging,
+            commands::staging::list_staged_files,
+            commands::staging::copy_staged_to_project,
+            commands::staging::clear_staging
         ])
         .setup(|app| {
             let app_handle = app.handle();

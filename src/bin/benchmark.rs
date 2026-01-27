@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::fs;
 
 struct BenchmarkResult {
     name: &'static str,
@@ -9,8 +9,10 @@ struct BenchmarkResult {
 const PASS_THRESHOLD: f32 = 70.0;
 const TARGET_AVERAGE: f32 = 85.0;
 
+type BenchmarkTest = (&'static str, fn() -> f32);
+
 fn main() {
-    let tests: Vec<(&'static str, fn() -> f32)> = vec![
+    let tests: Vec<BenchmarkTest> = vec![
         ("Codegen core opcodes", test_codegen_core),
         ("Codegen control flow", test_codegen_control_flow),
         ("Codegen VM patterns", test_codegen_vm_patterns),

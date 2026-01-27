@@ -2,6 +2,8 @@
 //! 
 //! A working native GUI using egui with actual text selection and copy/paste.
 
+#![allow(dead_code)] // Many enum variants and methods are preserved for future features
+
 use eframe::egui;
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
@@ -315,7 +317,7 @@ impl eframe::App for LPCDevApp {
 
                 // Provider selection
                 ui.label("Provider:");
-                egui::ComboBox::from_id_source("provider_select")
+                egui::ComboBox::new("provider_select", "Provider")
                     .selected_text(match self.provider {
                         Provider::LocalOllama => "Local Ollama",
                         Provider::OpenAI => "OpenAI",
@@ -341,7 +343,7 @@ impl eframe::App for LPCDevApp {
                 ui.add_space(8.0);
 
                 ui.label("Model:");
-                egui::ComboBox::from_id_source("model_select")
+                egui::ComboBox::new("model_select", "Model")
                     .selected_text(
                         self.selected_model
                             .map(|i| self.models[i].name.as_str())
@@ -418,7 +420,7 @@ impl eframe::App for LPCDevApp {
             };
 
             egui::ScrollArea::vertical()
-                .id_source("response_scroll")
+                .id_salt("response_scroll")
                 .max_height(300.0)
                 .show(ui, |ui| {
                     // Use a mutable local string to satisfy TextEdit API when response is read-only
@@ -437,7 +439,7 @@ impl eframe::App for LPCDevApp {
             // References display
             ui.label("📚 References:");
             egui::ScrollArea::vertical()
-                .id_source("refs_scroll")
+                .id_salt("refs_scroll")
                 .max_height(150.0)
                 .show(ui, |ui| {
                     if self.references.is_empty() {

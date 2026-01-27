@@ -1,5 +1,4 @@
 use lpc_dev_assistant::ContextManager;
-use std::path::PathBuf;
 
 fn main() -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;

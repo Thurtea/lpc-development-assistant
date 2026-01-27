@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use crate::wsl::{command_executor::WslExecutor, PathMapper};
@@ -45,6 +45,7 @@ impl DriverPipeline {
         })
     }
 
+    #[allow(dead_code)] // Stub implementations preserved for future AST/bytecode analysis features
     pub async fn ast(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
         let safe_path = self.validate_and_escape_path(file_path)?;
         let command = format!("./build/driver ast {}", safe_path);
@@ -58,6 +59,7 @@ impl DriverPipeline {
         })
     }
 
+    #[allow(dead_code)] // Stub implementations preserved for future AST/bytecode analysis features
     pub async fn bytecode(&self, file_path: &str, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
         let safe_path = self.validate_and_escape_path(file_path)?;
         let command = format!("./build/driver bytecode {}", safe_path);
@@ -83,6 +85,7 @@ impl DriverPipeline {
         })
     }
 
+    #[allow(dead_code)] // Stub implementations preserved for future AST/bytecode analysis features
     pub async fn test(&self, _on_event: impl FnMut(crate::wsl::command_executor::CommandEvent)) -> Result<CompileResult> {
         let command = "make test".to_string();
 

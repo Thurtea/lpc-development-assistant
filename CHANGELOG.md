@@ -5,6 +5,57 @@ All notable changes to LPC Development Assistant are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-27
+
+### Added
+- **Ollama Setup Wizard**: Complete configuration interface for Ollama installation, models, and status
+  - Check Ollama installation and running status
+  - Start Ollama server directly from UI
+  - Pull models from dropdown selection (qwen2.5-coder:7b, glm-4.7-flash, glm-4.7:cloud)
+  - View installed models list
+  - Save Ollama configuration to persistent storage
+- **Staging Workflow**: Safe code review before deployment to AMLP projects
+  - New Staging tab for reviewing generated code
+  - Save generated code to staging directory first
+  - Preview file contents (200 chars) with full view option
+  - Copy individual files to driver or library after review
+  - Clear staging directory with confirmation
+  - Auto-initialize staging at ~/.lpc-dev-assistant/staging/
+- **Project Path Configuration**: Centralized management of AMLP paths
+  - Configure AMLP Driver Root path (WSL)
+  - Configure AMLP Library Root path (WSL)
+  - Test path connectivity before saving
+  - Display staging directory location (read-only)
+- **Automatic File Backups**: Timestamp-based backup before overwriting
+  - Format: filename.c.bak-YYYYMMDD-HHMMSS
+  - Preserves original files when copying from staging
+- **Enhanced Config Structure**: Extended DriverConfig with new fields
+  - ollama_model: Selected model name
+  - ollama_provider: "local" or "cloud"
+  - ollama_enabled_tools: Future expansion for tool integration
+  - staging_directory: Path to staging location
+  - setup_complete: Track wizard completion status
+
+### Changed
+- **Code Generation Flow**: Generated code now saves to staging first instead of direct deployment
+- **Copy Buttons**: "To Driver" and "To Library" buttons now route through staging workflow
+- **Tab Navigation**: Added Staging tab between Generated Code and Settings
+- **Settings Tab**: Reorganized with new Ollama Setup and Project Paths sections
+
+### Fixed
+- Removed all non-ASCII characters (emojis, special arrows, bullets) from UI
+- Replaced Unicode arrows with "To Driver"/"To Library" text
+- Converted ellipsis (...) to ASCII equivalent
+- Replaced bullet characters with hyphens
+
+### Technical
+- New Rust module: src-tauri/src/commands/staging.rs
+- New Tauri commands: check_ollama_installed, check_ollama_running, start_ollama_server, pull_ollama_model, list_ollama_models, setup_staging_directory
+- New staging commands: save_to_staging, list_staged_files, copy_staged_to_project, clear_staging
+- WSL integration for safe file copying with parent directory creation
+
+---
+
 ## [1.2.0] - 2026-01-26
 
 ### Added

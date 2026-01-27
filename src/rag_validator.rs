@@ -43,14 +43,14 @@ pub struct CodeExample {
 pub struct RAGValidator {
     index: MudReferenceIndex,
     efun_definitions: HashMap<String, EfunDefinition>,
-    min_confidence_threshold: f32,
+    _min_confidence_threshold: f32,
 }
 
 #[derive(Debug, Clone)]
 struct EfunDefinition {
-    name: String,
+    _name: String,
     sources: Vec<String>,
-    signatures: Vec<String>,
+    _signatures: Vec<String>,
 }
 
 impl RAGValidator {
@@ -60,7 +60,7 @@ impl RAGValidator {
         Ok(Self {
             index,
             efun_definitions,
-            min_confidence_threshold: 0.3,
+            _min_confidence_threshold: 0.3,
         })
     }
 
@@ -156,18 +156,18 @@ impl RAGValidator {
     /// Extract efun names from text
     fn extract_efuns(&self, text: &str) -> Vec<String> {
         let mut found = Vec::new();
-        
-        for (efun_name, _) in &self.efun_definitions {
+
+        for efun_name in self.efun_definitions.keys() {
             if text.contains(efun_name) {
                 found.push(efun_name.clone());
             }
         }
-        
+
         found
     }
 
     /// Check if path is a source file
-    fn is_source_file(&self, path: &PathBuf) -> bool {
+    fn is_source_file(&self, path: &std::path::Path) -> bool {
         path.extension()
             .and_then(|e| e.to_str())
             .map(|e| matches!(e, "c" | "h" | "lpc"))
@@ -251,7 +251,7 @@ impl RAGValidator {
     }
 
     /// Load efun definitions from corpus
-    fn load_efun_definitions(corpus_root: &PathBuf) -> Result<HashMap<String, EfunDefinition>> {
+    fn load_efun_definitions(corpus_root: &std::path::Path) -> Result<HashMap<String, EfunDefinition>> {
         let mut definitions = HashMap::new();
         
         // Load all_efuns.txt
@@ -262,9 +262,9 @@ impl RAGValidator {
                 if !name.is_empty() {
                     definitions.entry(name.to_string())
                         .or_insert_with(|| EfunDefinition {
-                            name: name.to_string(),
+                            _name: name.to_string(),
                             sources: vec!["all_efuns.txt".to_string()],
-                            signatures: Vec::new(),
+                            _signatures: Vec::new(),
                         });
                 }
             }
@@ -278,10 +278,10 @@ impl RAGValidator {
                 if !name.is_empty() {
                     definitions.entry(name.to_string())
                         .or_insert_with(|| EfunDefinition {
-                            name: name.to_string(),
-                            sources: Vec::new(),
-                            signatures: Vec::new(),
-                        })
+                                _name: name.to_string(),
+                                sources: Vec::new(),
+                                _signatures: Vec::new(),
+                            })
                         .sources.push("merentha_efuns.txt".to_string());
                 }
             }
@@ -318,7 +318,7 @@ mod tests {
         let validator = RAGValidator {
             index: MudReferenceIndex::new(PathBuf::from("/tmp")),
             efun_definitions: HashMap::new(),
-            min_confidence_threshold: 0.3,
+            _min_confidence_threshold: 0.3,
         };
         
         assert_eq!(validator.calculate_confidence_score(&docs), 0.0);
@@ -329,7 +329,7 @@ mod tests {
         let validator = RAGValidator {
             index: MudReferenceIndex::new(PathBuf::from("/tmp")),
             efun_definitions: HashMap::new(),
-            min_confidence_threshold: 0.3,
+            _min_confidence_threshold: 0.3,
         };
         
         assert!(validator.is_source_file(&PathBuf::from("test.c")));

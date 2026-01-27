@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::{Result, Context};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct OllamaGenerateRequest {
     model: String,
@@ -11,6 +12,7 @@ pub struct OllamaGenerateRequest {
     options: Option<OllamaOptions>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Clone)]
 pub struct OllamaOptions {
     pub temperature: f32,
@@ -35,6 +37,7 @@ impl OllamaOptions {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct OllamaGenerateResponse {
     pub model: String,
@@ -42,21 +45,25 @@ pub struct OllamaGenerateResponse {
     pub done: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct OllamaModel {
     pub name: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct OllamaListResponse {
     pub models: Vec<OllamaModel>,
 }
 
+#[allow(dead_code)]
 pub struct OllamaClient {
     base_url: String,
     client: reqwest::Client,
 }
 
+#[allow(dead_code)]
 impl OllamaClient {
     pub fn new() -> Result<Self, anyhow::Error> {
         // Allow overriding Ollama base URL and timeout via environment variables for flexibility in testing and CI.
@@ -218,7 +225,7 @@ impl OllamaClient {
                 }
             };
 
-            let _ = rt.block_on(async move {
+            rt.block_on(async move {
                 let request = OllamaGenerateRequest {
                     model: model.clone(),
                     prompt: prompt.clone(),
@@ -232,7 +239,7 @@ impl OllamaClient {
                     .send()
                     .await;
 
-                let mut response = match res {
+                let response = match res {
                     Ok(r) => r,
                     Err(e) => {
                         let _ = tx.send(Err(anyhow::anyhow!(e))).await;

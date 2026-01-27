@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::mud_index::MudReferenceIndex;
 
 pub struct PromptBuilder {
-    templates_dir: PathBuf,
+    _templates_dir: PathBuf,
     templates: HashMap<String, String>,
     reference_index: Option<MudReferenceIndex>,
 }
@@ -85,7 +85,7 @@ impl PromptBuilder {
 
     pub fn new(templates_dir: PathBuf) -> Result<Self, String> {
         let mut pb = PromptBuilder {
-            templates_dir: templates_dir.clone(),
+            _templates_dir: templates_dir.clone(),
             templates: HashMap::new(),
             reference_index: None,
         };
@@ -112,7 +112,7 @@ impl PromptBuilder {
     /// Fallback constructor that never fails; templates map is empty
     pub fn new_empty(templates_dir: PathBuf) -> Self {
         PromptBuilder {
-            templates_dir,
+            _templates_dir: templates_dir,
             templates: HashMap::new(),
             reference_index: None,
         }
@@ -210,7 +210,7 @@ impl PromptBuilder {
                 out.push_str(ex);
                 out.push_str("\n----\n");
             }
-            out.push_str("\n");
+            out.push('\n');
         }
 
         // Add supporting templates
@@ -267,7 +267,7 @@ impl PromptBuilder {
             reduced.push_str("\n\nProvide complete C code following patterns shown above.");
 
             // If still too large, truncate final_text to char limit
-            let mut final_chars = (max_tokens * 4) as usize;
+            let mut final_chars = max_tokens * 4;
             if final_chars > reduced.len() { final_chars = reduced.len(); }
             final_text = reduced.chars().take(final_chars).collect();
             // ensure user query remains intact

@@ -40,7 +40,11 @@ Setup screenshots:
 
 Download the latest installer from [Releases](https://github.com/Thurtea/lpc-development-assistant/releases/latest):
 
-**Latest: v1.2.0 - January 26, 2026**
+**Latest: v1.3.0 - January 27, 2026**
+- **File**: LPC Dev Assistant_1.3.0_x64_en-US.msi
+- **New Features**: Ollama setup wizard, staging workflow, project path configuration
+
+**Previous: v1.2.0 - January 26, 2026**
 - **File**: LPC Dev Assistant_1.2.0_x64_en-US.msi (20.3 MB)
 - **SHA256**: `2A9E90BEE4ED03EB584557B6E6179652B2C5480B4D614F1090862E5BD4344AE1`
 

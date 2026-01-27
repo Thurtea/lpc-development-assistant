@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use walkdir::WalkDir;
 use anyhow::{Result, Context as AnyhowContext};
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct ReferenceDocument {
     pub path: PathBuf,
@@ -13,6 +14,7 @@ pub struct ReferenceDocument {
     pub size_bytes: usize,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReferenceType {
     Efuns,
@@ -22,6 +24,7 @@ pub enum ReferenceType {
     Unknown,
 }
 
+#[allow(dead_code)]
 pub struct ContextManager {
     mud_references_path: PathBuf,
     templates_path: PathBuf,
@@ -30,6 +33,7 @@ pub struct ContextManager {
     cache_loaded: bool,
 }
 
+#[allow(dead_code)] // Public API methods preserved for future features
 impl ContextManager {
     pub fn new(workspace_root: PathBuf) -> Self {
         let mud_references_path = workspace_root.join("mud-references");
@@ -157,18 +161,16 @@ impl ContextManager {
                         .scan(0, |acc, line| { let len = *acc; *acc += line.len() + 1; Some(len) })
                         .collect();
 
-                    let mut current_byte = 0;
                     let mut line_idx = 0;
                     for (i, &byte_pos) in byte_count.iter().enumerate() {
                         if byte_pos <= pos {
                             line_idx = i;
-                            current_byte = byte_pos;
                         } else {
                             break;
                         }
                     }
 
-                    let start_line = if line_idx > context_lines { line_idx - context_lines } else { 0 };
+                    let start_line = line_idx.saturating_sub(context_lines);
                     let end_line = std::cmp::min(line_idx + context_lines + 1, lines.len());
 
                     return Some(lines[start_line..end_line].join("\n"));
@@ -264,49 +266,49 @@ impl ContextManager {
     pub fn load_mudlib_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("mudlib_context.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load mudlib context"))
+            .with_context(|| "Failed to load mudlib context".to_string())
     }
 
     pub fn load_efuns_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("efuns_context.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load efuns context"))
+            .with_context(|| "Failed to load efuns context".to_string())
     }
 
     pub fn load_reference_sources_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("reference_sources.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load reference sources context"))
+            .with_context(|| "Failed to load reference sources context".to_string())
     }
 
     pub fn load_simul_efun_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("simul_efun_summary.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load simul_efun summary context"))
+            .with_context(|| "Failed to load simul_efun summary context".to_string())
     }
 
     pub fn load_master_api_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("master_api.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load master api context"))
+            .with_context(|| "Failed to load master api context".to_string())
     }
 
     pub fn load_socket_api_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("socket_api.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load socket api context"))
+            .with_context(|| "Failed to load socket api context".to_string())
     }
 
     pub fn load_comm_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("comm_summary.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load comm summary context"))
+            .with_context(|| "Failed to load comm summary context".to_string())
     }
 
     pub fn load_backend_context(&self) -> Result<String> {
         let template_path = self.templates_path.join("backend_loop.txt");
         fs::read_to_string(&template_path)
-            .with_context(|| format!("Failed to load backend loop context"))
+            .with_context(|| "Failed to load backend loop context".to_string())
     }
 
     // Generic loader by filename for small snippet runners

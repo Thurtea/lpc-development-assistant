@@ -50,7 +50,7 @@ fn process_path(base: &Path, path: &Path, writer: &mut BufWriter<File>) -> io::R
             "chunk_index": i,
             "text": chunk,
         });
-        writeln!(writer, "{}", obj.to_string())?;
+        writeln!(writer, "{}", obj)?;
     }
     Ok(1)
 }

@@ -1,3 +1,3 @@
 pub mod pipeline;
 
-pub use pipeline::{CompileResult, DriverPipeline};
+// Public re-exports removed as types are not used externally
