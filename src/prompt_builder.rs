@@ -124,9 +124,9 @@ impl PromptBuilder {
     }
 
     pub fn build_prompt(&self, user_query: &str, _model: &str, examples: Vec<String>) -> Result<String, String> {
-        // System header with enhanced role
+        // System header with enhanced role and clear project context
         let mut out = String::new();
-        out.push_str("You are LPC Driver Architect. IMPLEMENT EXACTLY using provided headers and APIs.\n");
+        out.push_str("You are LPC Driver Architect for LPC MUD. IMPLEMENT EXACTLY using provided headers and APIs.\n");
         out.push_str("NO redefinitions. Emit bytecode only.\n");
         out.push_str("Traverse AST recursively. Match MudOS/FluffOS patterns from context.\n\n");
 
