@@ -636,19 +636,8 @@
       
       <label style="display:block; margin-bottom:6px; color:var(--text); font-weight:600;">Optional Tools (Future)</label>
       <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
-          <input type="checkbox" id="tool-claude" disabled />
-          <span style="color:var(--muted);">Claude Code (Coming Soon)</span>
-        </label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
-          <input type="checkbox" id="tool-opencode" disabled />
-          <span style="color:var(--muted);">OpenCode (Coming Soon)</span>
-        </label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
-          <input type="checkbox" id="tool-codex" disabled />
-          <span style="color:var(--muted);">Codex (Coming Soon)</span>
-        </label>
-      </div>
+        </div>
+      <!-- REMOVED: Optional Tools section with Coming Soon placeholders (was unused) -->
       
       <button id="save-ollama-config-btn" class="action-btn">Save Ollama Configuration</button>
       <div id="ollama-config-status" style="margin-top:10px; padding:10px; background:var(--code); border-radius:4px; border:1px solid var(--border); display:none; color:var(--muted); font-size:12px;"></div>
@@ -882,20 +871,29 @@
     }
 
     async function loadModels() {
+      // FIXED: Improved error handling - shows errors to user, not just console
       // Verify qwen2.5-coder:7b is available
       try {
         const models = await (window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke)('get_available_models');
+        if (!models || models.length === 0) {
+          setStatus(`No models found. Install Ollama and run: ollama pull ${REQUIRED_MODEL}`, 'error');
+          toast(`No models found! Run: ollama pull ${REQUIRED_MODEL}`);
+          return false;
+        }
         if (!models.includes(REQUIRED_MODEL)) {
           console.warn(`Required model ${REQUIRED_MODEL} not found. Available:`, models);
-          setStatus(`Please install: ollama pull ${REQUIRED_MODEL}`, 'error');
+          setStatus(`Model not installed. Run: ollama pull ${REQUIRED_MODEL}`, 'error');
           toast(`Model ${REQUIRED_MODEL} not found! Run: ollama pull ${REQUIRED_MODEL}`);
-        } else {
-          state.currentModel = REQUIRED_MODEL;
-          setStatus('Ready', 'success');
+          return false;
         }
+        state.currentModel = REQUIRED_MODEL;
+        return true; // Success
       } catch (e) {
-        console.error(e);
-        setStatus('Cannot reach Ollama', 'error');
+        const errorMsg = e?.message || e || 'Unknown error';
+        console.error('loadModels error:', e);
+        setStatus(`Failed to load models: ${errorMsg}`, 'error');
+        toast(`Failed to load models: ${errorMsg}`);
+        return false;
       }
     }
 
@@ -1167,6 +1165,7 @@
     // New Ollama and Staging Functions
 
     async function checkOllamaStatus() {
+      // FIXED: Better error handling in Settings tab Ollama section
       const installedStatus = document.getElementById('ollama-installed-status');
       const runningStatus = document.getElementById('ollama-running-status');
       const downloadBtn = document.getElementById('download-ollama-btn');
@@ -1179,13 +1178,19 @@
           setStatusRow('ollama-installed-status', true, 'Ollama installed');
           downloadBtn.style.display = 'none';
           
-          const running = await window.__TAURI__.invoke('check_ollama_running');
-          if (running) {
-            setStatusRow('ollama-running-status', true, 'Ollama server running');
-            startBtn.disabled = true;
-            await loadInstalledModels();
-          } else {
-            setStatusRow('ollama-running-status', false, 'Ollama server not running');
+          try {
+            const running = await window.__TAURI__.invoke('check_ollama_running');
+            if (running) {
+              setStatusRow('ollama-running-status', true, 'Ollama server running');
+              startBtn.disabled = true;
+              await loadInstalledModels();
+            } else {
+              setStatusRow('ollama-running-status', false, 'Ollama server not running');
+              startBtn.disabled = false;
+            }
+          } catch (runError) {
+            console.error('Failed to check Ollama running status:', runError);
+            setStatusRow('ollama-running-status', false, 'Ollama status unknown (is it running?)');
             startBtn.disabled = false;
           }
         } else {
@@ -1196,7 +1201,9 @@
         }
       } catch (e) {
         console.error('Failed to check Ollama status:', e);
-        toast('Failed to check Ollama status');
+        setStatusRow('ollama-installed-status', false, `Check failed: ${e?.message || e}`);
+        setStatusRow('ollama-running-status', false, 'Could not verify');
+        toast(`Failed to check Ollama status: ${e?.message || e}`);
       }
     }
 
@@ -1223,6 +1230,7 @@
     }
 
     async function pullSelectedModel() {
+      // FIXED: Better error handling for model pulling
       const select = document.getElementById('ollama-model-select');
       const model = select.value;
       const btn = document.getElementById('pull-model-btn');
@@ -1236,7 +1244,9 @@
         await loadInstalledModels();
       } catch (e) {
         console.error('Failed to pull model:', e);
-        toast(`Failed to pull model: ${e}`);
+        const errorMsg = e?.message || e || 'Unknown error';
+        toast(`Failed to pull model: ${errorMsg}`);
+        alert(`Pull failed. Make sure Ollama is running and you have internet connection.\n\nError: ${errorMsg}`);
       } finally {
         btn.disabled = false;
         btn.textContent = 'Pull Selected Model';
@@ -1244,14 +1254,15 @@
     }
 
     async function loadInstalledModels() {
+      // FIXED: Better error messages for model list loading
       const list = document.getElementById('installed-models-list');
-      list.innerHTML = '<span style="color:var(--muted); font-size:12px;">Loading...</span>';
+      list.innerHTML = '<span style="color:var(--muted); font-size:12px;">Loading models...</span>';
       
       try {
         const models = await window.__TAURI__.invoke('list_ollama_models');
         
-        if (models.length === 0) {
-          list.innerHTML = '<span style="color:var(--muted); font-size:12px;">No models installed yet.</span>';
+        if (!models || models.length === 0) {
+          list.innerHTML = '<span style="color:var(--muted); font-size:12px;">No models installed. Install one using the "Pull Selected Model" button above.</span>';
           return;
         }
         
@@ -1260,7 +1271,8 @@
         ).join('');
       } catch (e) {
         console.error('Failed to load models:', e);
-        list.innerHTML = '<span style="color:var(--error); font-size:12px;">Failed to load models</span>';
+        const errorMsg = e?.message || e || 'Unknown error';
+        list.innerHTML = `<span style="color:var(--error); font-size:12px;">Failed to load models: ${errorMsg}</span>`;
       }
     }
 
@@ -1484,26 +1496,45 @@
       renderValidation(emptyMetrics);
       renderScorePill(emptyMetrics);
       
-      // Initialize async operations in background
-      (async () => {
+      // FIXED: Proper sequential initialization with error handling
+      // Show status updates as we go, don't set "Ready" until critical operations complete
+      setStatus('Initializing...', 'info');
+      
+      try {
+        // Step 1: Check if setup is needed (critical - must complete)
+        setStatus('Checking setup status...', 'info');
         try {
           await checkSetup();
         } catch (e) {
-          console.warn('Setup check failed:', e);
+          console.error('Setup check failed:', e);
+          toast(`Warning: Setup check failed: ${e?.message || e}`);
         }
         
+        // Step 2: Verify Ollama (critical - must be running)
+        setStatus('Checking Ollama service...', 'info');
         try {
           await checkAndStartOllama();
         } catch (e) {
-          console.warn('Ollama check failed:', e);
+          console.error('Ollama check failed:', e);
+          toast(`Warning: Ollama check failed: ${e?.message || e}`);
         }
         
+        // Step 3: Load available models (critical - needed for assistant)
+        setStatus('Loading available models...', 'info');
+        let modelsLoaded = false;
         try {
-          await loadModels();
+          modelsLoaded = await loadModels();
+          if (!modelsLoaded) {
+            console.warn('Model verification failed');
+            toast('Warning: Could not verify required model');
+          }
         } catch (e) {
-          console.warn('Load models failed:', e);
+          console.error('Load models failed:', e);
+          toast(`Warning: Could not load models: ${e?.message || e}`);
         }
         
+        // Step 4: Perform secondary operations in parallel (not blocking)
+        setStatus('Loading configuration...', 'info');
         try {
           await performWslValidation();
         } catch (e) {
@@ -1521,10 +1552,18 @@
         } catch (e) {
           console.warn('Load project paths failed:', e);
         }
-      })();
-      
-      // Set ready immediately - don't wait for async operations
-      setStatus('Ready', 'success');
+        
+        // FIXED: Only set "Ready" if critical operations succeeded
+        if (modelsLoaded) {
+          setStatus('Ready', 'success');
+        } else {
+          setStatus('Ready (with warnings - see notification)', 'warning');
+        }
+      } catch (e) {
+        console.error('Critical initialization error:', e);
+        setStatus('Initialization error (see notification)', 'error');
+        toast(`Critical error during startup: ${e?.message || e}`);
+      }
     });
 
     async function checkAndStartOllama() {
