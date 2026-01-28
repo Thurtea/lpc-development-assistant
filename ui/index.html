@@ -1490,17 +1490,49 @@
 
 
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      loadSettings();
-      bindEvents();
-      renderValidation(emptyMetrics);
-      renderScorePill(emptyMetrics);
-      
-      // FIXED: Proper sequential initialization with error handling
-      // Show status updates as we go, don't set "Ready" until critical operations complete
-      setStatus('Initializing...', 'info');
-      
+    // FIXED: Wait for Tauri API to be ready before initialization
+    // DOMContentLoaded fires before Tauri injects the API, so we use IIFE with waitForTauri
+    async function waitForTauri() {
+      return new Promise((resolve) => {
+        // Check if Tauri is already available
+        if (window.__TAURI__) {
+          resolve();
+        } else {
+          // Wait for DOMContentLoaded event as fallback
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', resolve);
+          } else {
+            resolve();
+          }
+        }
+      });
+    }
+
+    // Main initialization - wait for both DOM and Tauri, then proceed with sequential setup
+    (async function initApp() {
       try {
+        // Step 0: Wait for Tauri API to be injected
+        await waitForTauri();
+        
+        // Give Tauri extra moment to fully initialize all handler bindings
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verify Tauri is available before proceeding
+        if (!window.__TAURI__) {
+          console.error('Tauri API not available after waiting - this should not happen');
+          throw new Error('Tauri API initialization failed');
+        }
+        
+        // Now safe to use invoke - perform initial UI setup
+        loadSettings();
+        bindEvents();
+        renderValidation(emptyMetrics);
+        renderScorePill(emptyMetrics);
+        
+        // FIXED: Proper sequential initialization with error handling
+        // Show status updates as we go, don't set "Ready" until critical operations complete
+        setStatus('Initializing...', 'info');
+        
         // Step 1: Check if setup is needed (critical - must complete)
         setStatus('Checking setup status...', 'info');
         try {
@@ -1564,7 +1596,7 @@
         setStatus('Initialization error (see notification)', 'error');
         toast(`Critical error during startup: ${e?.message || e}`);
       }
-    });
+    })();
 
     async function checkAndStartOllama() {
       try {
