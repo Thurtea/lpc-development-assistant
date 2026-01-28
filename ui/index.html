@@ -10,6 +10,15 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- FIXED: Explicitly load Tauri API before any code tries to use it -->
+  <script type="module">
+    // Verify Tauri is available when page loads
+    if (!window.__TAURI__) {
+      console.warn('Tauri API not yet available, waiting for injection...');
+    } else {
+      console.log('Tauri API already available');
+    }
+  </script>
   <style>
     :root {
       --bg: #0d1117;
@@ -1490,50 +1499,42 @@
 
 
 
-    // FIXED: Wait for Tauri API to be ready before initialization
-    // DOMContentLoaded fires before Tauri injects the API, so we use IIFE with waitForTauri
-    async function waitForTauri() {
-      return new Promise((resolve) => {
-        // Check if Tauri is already available
-        if (window.__TAURI__) {
-          resolve();
-        } else {
-          // Wait for DOMContentLoaded event as fallback
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', resolve);
-          } else {
-            resolve();
-          }
-        }
-      });
-    }
+    // FIXED: Use Tauri's invoke directly - available globally in Tauri apps
+    // Reference: Tauri 2.x with withGlobalTauri: true makes window.__TAURI__ available
+    const invoke = window.__TAURI__?.invoke;
 
-    // Main initialization - wait for both DOM and Tauri, then proceed with sequential setup
-    (async function initApp() {
+    // Simple initialization pattern without complex timing issues
+    window.addEventListener('DOMContentLoaded', async () => {
+      console.log('DOM loaded, starting init...');
+      
+      // Perform initial UI setup immediately
+      loadSettings();
+      bindEvents();
+      renderValidation(emptyMetrics);
+      renderScorePill(emptyMetrics);
+      
+      // Brief delay to ensure Tauri fully ready before first invoke
+      await new Promise(r => setTimeout(r, 200));
+      
+      setStatus('Initializing...', 'info');
+      
+      // Test Tauri connection first
       try {
-        // Step 0: Wait for Tauri API to be injected
-        await waitForTauri();
-        
-        // Give Tauri extra moment to fully initialize all handler bindings
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Verify Tauri is available before proceeding
-        if (!window.__TAURI__) {
-          console.error('Tauri API not available after waiting - this should not happen');
-          throw new Error('Tauri API initialization failed');
+        if (!invoke) {
+          throw new Error('window.__TAURI__.invoke is not available');
         }
-        
-        // Now safe to use invoke - perform initial UI setup
-        loadSettings();
-        bindEvents();
-        renderValidation(emptyMetrics);
-        renderScorePill(emptyMetrics);
-        
-        // FIXED: Proper sequential initialization with error handling
-        // Show status updates as we go, don't set "Ready" until critical operations complete
-        setStatus('Initializing...', 'info');
-        
-        // Step 1: Check if setup is needed (critical - must complete)
+        console.log('Testing Tauri invoke...');
+        const test = await invoke('get_setup_status');
+        console.log('Tauri invoke works!', test);
+      } catch (e) {
+        console.error('TAURI INVOKE FAILED:', e);
+        setStatus('Initialization error (see notification)', 'error');
+        toast('Tauri API not available: ' + e.message);
+        return; // Stop here if Tauri isn't working
+      }
+      
+      // Now proceed with rest of initialization
+      try {
         setStatus('Checking setup status...', 'info');
         try {
           await checkSetup();
@@ -1542,7 +1543,6 @@
           toast(`Warning: Setup check failed: ${e?.message || e}`);
         }
         
-        // Step 2: Verify Ollama (critical - must be running)
         setStatus('Checking Ollama service...', 'info');
         try {
           await checkAndStartOllama();
@@ -1551,7 +1551,6 @@
           toast(`Warning: Ollama check failed: ${e?.message || e}`);
         }
         
-        // Step 3: Load available models (critical - needed for assistant)
         setStatus('Loading available models...', 'info');
         let modelsLoaded = false;
         try {
@@ -1565,7 +1564,6 @@
           toast(`Warning: Could not load models: ${e?.message || e}`);
         }
         
-        // Step 4: Perform secondary operations in parallel (not blocking)
         setStatus('Loading configuration...', 'info');
         try {
           await performWslValidation();
@@ -1585,18 +1583,18 @@
           console.warn('Load project paths failed:', e);
         }
         
-        // FIXED: Only set "Ready" if critical operations succeeded
+        // FIXED: Only set Ready if critical operations succeeded
         if (modelsLoaded) {
           setStatus('Ready', 'success');
         } else {
           setStatus('Ready (with warnings - see notification)', 'warning');
         }
-      } catch (e) {
-        console.error('Critical initialization error:', e);
+      } catch (error) {
+        console.error('Init error:', error);
         setStatus('Initialization error (see notification)', 'error');
-        toast(`Critical error during startup: ${e?.message || e}`);
+        toast('Initialization failed: ' + error.message);
       }
-    })();
+    });
 
     async function checkAndStartOllama() {
       try {
