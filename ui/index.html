@@ -1299,84 +1299,108 @@
     // New Ollama and Staging Functions
 
     async function checkOllamaStatus() {
+      __lpcDiagnostics.log('wizard', 'checkOllamaStatus_start', {});
+      
       const statusEl = document.getElementById('wizard-ollama-status');
       const dlBtn = document.getElementById('wizard-ollama-download');
       const startBtn = document.getElementById('wizard-ollama-start');
       const readyEl = document.getElementById('wizard-ollama-ready');
+      
       if (statusEl) statusEl.textContent = 'Checking Ollama...';
       if (dlBtn) dlBtn.style.display = 'none';
       if (startBtn) startBtn.style.display = 'none';
       if (readyEl) readyEl.style.display = 'none';
 
-      // helper: timeout wrapper
-      const withTimeout = (p, ms) => Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
-
       try {
-        let installed = false;
-        try {
-          installed = await withTimeout(invokeSafe('check_ollama_installed'), 5000);
-        } catch (err) {
-          if (statusEl) statusEl.textContent = 'Ollama check timed out or failed';
-          __wizardState.ollamaReady = false;
-          renderWizardStep();
-          return;
-        }
+        const status = await invokeSafe('check_ollama_comprehensive');
+        __lpcDiagnostics.log('wizard', 'ollama_status_received', status);
 
-        if (!installed) {
-          if (statusEl) statusEl.textContent = 'Ollama not installed.';
+        if (!status.installed) {
+          const msg = status.error || 'Ollama not installed.';
+          if (statusEl) statusEl.textContent = msg;
+          __lpcDiagnostics.log('wizard', 'ollama_not_installed', { error: status.error });
+          
           if (dlBtn) {
             dlBtn.style.display = 'inline-flex';
-            safeAddListener(dlBtn, 'click', () => window.open('https://ollama.com/download','_blank'));
+            safeAddListener(dlBtn, 'click', () => {
+              __lpcDiagnostics.log('wizard', 'download_clicked', {});
+              window.open('https://ollama.com/download', '_blank');
+            });
+          }
+          __wizardState.ollamaReady = false;
+        } else if (!status.running) {
+          const msg = `Ollama ${status.version || ''} installed but not running.`;
+          if (statusEl) statusEl.textContent = msg;
+          __lpcDiagnostics.log('wizard', 'ollama_not_running', { version: status.version });
+          
+          if (startBtn) {
+            startBtn.style.display = 'inline-flex';
+            safeAddListener(startBtn, 'click', async () => {
+              __lpcDiagnostics.log('wizard', 'start_clicked', {});
+              startBtn.disabled = true;
+              startBtn.textContent = 'Starting...';
+              
+              try {
+                const newStatus = await invokeSafe('start_ollama_with_verification');
+                __lpcDiagnostics.log('wizard', 'start_result', newStatus);
+                
+                if (newStatus.running) {
+                  if (statusEl) statusEl.textContent = '✅ Ollama is ready';
+                  if (readyEl) readyEl.style.display = 'block';
+                  __wizardState.ollamaReady = true;
+                } else {
+                  const errMsg = newStatus.error || 'Failed to start Ollama after 10s wait';
+                  if (statusEl) statusEl.textContent = errMsg;
+                  __lpcDiagnostics.log('wizard', 'start_failed', { error: errMsg });
+                  __wizardState.ollamaReady = false;
+                }
+              } catch (e) {
+                const errMsg = 'Error starting Ollama: ' + (e?.message || e);
+                if (statusEl) statusEl.textContent = errMsg;
+                __lpcDiagnostics.log('wizard', 'start_exception', { error: e?.message || e });
+                __wizardState.ollamaReady = false;
+              }
+              
+              renderWizardStep();
+            });
           }
           __wizardState.ollamaReady = false;
         } else {
-          // installed -> check running with timeout
-          let running = false;
-          try {
-            running = await withTimeout(invokeSafe('check_ollama_running'), 5000);
-          } catch (err) {
-            if (statusEl) statusEl.textContent = 'Ollama running check timed out';
-            __wizardState.ollamaReady = false;
-            renderWizardStep();
-            return;
-          }
-
-          if (running) {
-            if (statusEl) statusEl.textContent = '✅ Ollama is ready';
-            if (readyEl) readyEl.style.display = 'block';
-            __wizardState.ollamaReady = true;
-          } else {
-            if (statusEl) statusEl.textContent = 'Ollama installed but not running.';
-            if (startBtn) {
-              startBtn.style.display = 'inline-flex';
-              safeAddListener(startBtn, 'click', async () => {
-                startBtn.disabled = true; if (startBtn) startBtn.textContent = 'Starting...';
-                try {
-                  await invokeSafe('start_ollama_server');
-                  // wait briefly then re-check
-                  await new Promise(r => setTimeout(r, 3000));
-                  const now = await withTimeout(invokeSafe('check_ollama_running'), 5000);
-                  if (now) {
-                    if (statusEl) statusEl.textContent = '✅ Ollama is ready';
-                    if (readyEl) readyEl.style.display = 'block';
-                    __wizardState.ollamaReady = true;
-                  } else {
-                    if (statusEl) statusEl.textContent = 'Failed to start Ollama.';
-                  }
-                } catch (e) {
-                  if (statusEl) statusEl.textContent = 'Failed to start Ollama: ' + (e?.message || e);
-                }
-                renderWizardStep();
-              });
-            }
-            __wizardState.ollamaReady = false;
-          }
+          if (statusEl) statusEl.textContent = `✅ Ollama ${status.version || ''} is ready`;
+          if (readyEl) readyEl.style.display = 'block';
+          __lpcDiagnostics.log('wizard', 'ollama_ready', { version: status.version });
+          __wizardState.ollamaReady = true;
         }
       } catch (e) {
-        if (statusEl) statusEl.textContent = 'Error checking Ollama: ' + (e?.message || e);
+        const errMsg = 'Error checking Ollama: ' + (e?.message || e);
+        if (statusEl) statusEl.textContent = errMsg;
+        __lpcDiagnostics.log('wizard', 'check_exception', { error: e?.message || String(e) });
         __wizardState.ollamaReady = false;
       }
+      
       renderWizardStep();
+    }
+
+    function addDiagnosticsExport() {
+      const exportBtn = document.createElement('button');
+      exportBtn.textContent = 'Export Diagnostics';
+      exportBtn.className = 'btn btn-ghost';
+      exportBtn.style.position = 'fixed';
+      exportBtn.style.bottom = '10px';
+      exportBtn.style.right = '10px';
+      exportBtn.style.zIndex = '10000';
+      
+      exportBtn.addEventListener('click', () => {
+        const blob = new Blob([__lpcDiagnostics.export()], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lpc-diagnostics-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+      
+      document.body.appendChild(exportBtn);
     }
 
     async function startOllamaServer() {
@@ -1701,6 +1725,44 @@
     }
 
     // Convenience: a direct invoke reference for legacy uses
+    // Diagnostic logging system
+    const __lpcDiagnostics = {
+      events: [],
+      maxEvents: 100,
+  
+      log(category, action, data) {
+        const event = {
+          timestamp: new Date().toISOString(),
+          category,
+          action,
+          data: JSON.stringify(data)
+        };
+        this.events.push(event);
+        if (this.events.length > this.maxEvents) {
+          this.events.shift();
+        }
+    
+        try {
+          localStorage.setItem('lpc-diagnostics', JSON.stringify(this.events));
+        } catch (e) {
+          console.warn('Failed to persist diagnostics', e);
+        }
+    
+        console.log(`[${category}] ${action}:`, data);
+      },
+  
+      export() {
+        return JSON.stringify(this.events, null, 2);
+      },
+  
+      clear() {
+        this.events = [];
+        try {
+          localStorage.removeItem('lpc-diagnostics');
+        } catch (e) {}
+      }
+    };
+
     let invoke;
     try { invoke = getInvoke(); } catch (e) { invoke = null; }
 
@@ -1885,6 +1947,7 @@
       // Perform initial UI setup immediately
       loadSettings();
       bindEvents();
+      addDiagnosticsExport();
       renderValidation(emptyMetrics);
       renderScorePill(emptyMetrics);
       

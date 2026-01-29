@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}};
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 // unused imports removed to satisfy clippy
 
 use tauri::{Window, Manager};
@@ -586,6 +586,108 @@ async fn validate_and_diagnose_wsl(config: DriverConfig) -> Result<WslDiagnostic
 
 // New Ollama Commands
 
+#[derive(Serialize, Deserialize, Debug)]
+struct OllamaStatus {
+    installed: bool,
+    running: bool,
+    version: Option<String>,
+    error: Option<String>,
+}
+
+#[tauri::command]
+async fn check_ollama_comprehensive() -> Result<OllamaStatus, String> {
+    use std::time::Duration;
+
+    let mut status = OllamaStatus {
+        installed: false,
+        running: false,
+        version: None,
+        error: None,
+    };
+
+    // Check installation
+    match tokio::process::Command::new("ollama")
+        .arg("--version")
+        .output()
+        .await
+    {
+        Ok(output) if output.status.success() => {
+            status.installed = true;
+            status.version = String::from_utf8(output.stdout)
+                .ok()
+                .map(|s| s.trim().to_string());
+        }
+        Ok(_) => {
+            status.error = Some("Ollama command found but returned error".to_string());
+        }
+        Err(e) => {
+            status.error = Some(format!("Ollama not found: {}", e));
+            return Ok(status);
+        }
+    }
+
+    // Check if running (only if installed)
+    if status.installed {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(3))
+            .build()
+            .map_err(|e| e.to_string())?;
+
+        match client.get("http://localhost:11434/api/tags").send().await {
+            Ok(resp) if resp.status().is_success() => {
+                status.running = true;
+            }
+            Ok(resp) => {
+                status.error = Some(format!("Ollama responded with status: {}", resp.status()));
+            }
+            Err(e) => {
+                if !e.is_timeout() && !e.is_connect() {
+                    status.error = Some(format!("Unexpected error: {}", e));
+                }
+            }
+        }
+    }
+
+    Ok(status)
+}
+
+#[tauri::command]
+async fn start_ollama_with_verification() -> Result<OllamaStatus, String> {
+    use std::time::Duration;
+
+    #[cfg(target_os = "windows")]
+    {
+        tokio::process::Command::new("cmd")
+            .args(["/C", "start", "", "ollama", "serve"])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn Ollama: {}", e))?;
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        tokio::process::Command::new("sh")
+            .args(&["-c", "ollama serve > /dev/null 2>&1 &"]) 
+            .spawn()
+            .map_err(|e| format!("Failed to spawn Ollama: {}", e))?;
+    }
+
+    // Progressive retry intervals: 2s, 3s, 5s = 10s total
+    let check_intervals = vec![2000, 3000, 5000];
+    
+    for (i, interval_ms) in check_intervals.iter().enumerate() {
+        tokio::time::sleep(Duration::from_millis(*interval_ms)).await;
+        
+        let status = check_ollama_comprehensive().await?;
+        if status.running {
+            return Ok(status);
+        }
+        
+        eprintln!("Ollama start check {}/{}: not running yet", i + 1, check_intervals.len());
+    }
+
+    check_ollama_comprehensive().await
+}
+
 #[tauri::command]
 async fn check_ollama_installed() -> Result<bool, String> {
     let output = tokio::process::Command::new("ollama")
@@ -776,6 +878,9 @@ fn main() {
             ask_ollama,
             ask_ollama_stream,
             check_ollama_health,
+            // New comprehensive check and start-with-verification
+            check_ollama_comprehensive,
+            start_ollama_with_verification,
             start_ollama,
             analyze_driver,
             list_models,
