@@ -296,7 +296,7 @@ fn start_ollama() -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
         Command::new("cmd")
-            .args(["/C", "start", "cmd", "/K", "ollama", "serve"])
+            .args(["/C", "start", "", "cmd", "/K", "ollama", "serve"])
             .spawn()
             .map_err(|e| format!("Failed to start Ollama: {}", e))?;
         // Give Ollama time to spin up, then retry connectivity a few times
@@ -614,7 +614,7 @@ async fn start_ollama_server() -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
         tokio::process::Command::new("cmd")
-            .args(["/C", "start", "ollama", "serve"])
+            .args(["/C", "start", "", "ollama", "serve"])
             .spawn()
             .map_err(|e| format!("Failed to start Ollama: {}", e))?;
         
