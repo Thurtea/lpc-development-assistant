@@ -448,64 +448,7 @@
   </style>
 </head>
 <body>
-  <!-- First-run Setup Wizard Modal (hidden until needed) -->
-  <div id="setup-wizard-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99998;">
-    <div id="setup-wizard" style="max-width:920px; margin:6vh auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; color:var(--text); box-shadow:var(--shadow); position:relative;">
-      <h2 style="margin-top:0;">Welcome — First Run Setup</h2>
-      <div id="wizard-steps" style="min-height:260px;">
-        <div class="wizard-step" data-step="1">
-          <h3>Step 1 — Ollama</h3>
-          <p id="wizard-ollama-desc">Checking Ollama installation...</p>
-          <div style="display:flex; gap:8px; margin-top:12px;">
-            <button id="wizard-ollama-download" class="action-btn" style="display:none; background:transparent; color:var(--muted); border:1px solid var(--border);">Download Ollama</button>
-            <button id="wizard-ollama-start" class="action-btn" style="display:none;">Start Ollama</button>
-            <div id="wizard-ollama-ready" style="display:none; color:var(--success); align-self:center; font-weight:700;">✅ Ollama Ready</div>
-          </div>
-        </div>
-
-        <div class="wizard-step" data-step="2" style="display:none;">
-          <h3>Step 2 — Staging Directory</h3>
-          <p>Choose a staging directory where generated files will be saved before copying to your projects.</p>
-          <input id="wizard-staging-path" class="input" style="width:100%; margin-top:8px;" />
-          <div style="display:flex; gap:8px; margin-top:12px;">
-            <button id="wizard-create-staging" class="action-btn">Create Directory</button>
-            <div id="wizard-staging-status" style="align-self:center; color:var(--muted);">Not created</div>
-          </div>
-        </div>
-
-        <div class="wizard-step" data-step="3" style="display:none;">
-          <h3>Step 3 — WSL / Driver Paths (Optional)</h3>
-          <p style="color:var(--muted);">Configure WSL paths for driver integration (you can skip this step).</p>
-          <label style="display:block; margin-top:8px;">WSL Username</label>
-          <input id="wizard-wsl-username" class="input" />
-          <label style="display:block; margin-top:8px;">Driver Root (WSL)</label>
-          <input id="wizard-driver-root" class="input" />
-          <label style="display:block; margin-top:8px;">Library Root (WSL)</label>
-          <input id="wizard-library-root" class="input" />
-          <div style="display:flex; gap:8px; margin-top:12px;">
-            <button id="wizard-skip-wsl" class="action-btn" style="background:transparent; color:var(--muted); border:1px solid var(--border);">Skip</button>
-            <button id="wizard-save-wsl" class="action-btn">Save</button>
-            <div id="wizard-wsl-status" style="align-self:center; color:var(--muted);">Not saved</div>
-          </div>
-        </div>
-
-        <div class="wizard-step" data-step="4" style="display:none;">
-          <h3>Step 4 — Done</h3>
-          <p id="wizard-summary">Setup complete. You're ready to start using the app.</p>
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
-        <div>
-          <button id="wizard-prev" class="action-btn" style="display:none; background:transparent; color:var(--muted); border:1px solid var(--border);">Previous</button>
-          <button id="wizard-next" class="action-btn">Next</button>
-        </div>
-        <div>
-          <button id="wizard-cancel" class="action-btn" style="background:transparent; color:var(--muted); border:1px solid var(--border);">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- First-run Setup Wizard Modal (single instance) removed duplicate markup; the canonical modal below is used -->
   <header>
     <div class="title">
       <div>
@@ -1749,7 +1692,7 @@
             <span id="wizard-staging-status" style="margin-left:8px; color:var(--muted);"></span>
           </div>
         `;
-        document.getElementById('wizard-staging-create').addEventListener('click', createStagingDir);
+        safeAddListener('wizard-staging-create', 'click', createStagingDir);
       } else if (__wizardState.step === 3) {
         body.innerHTML = `
           <h3>WSL Setup (optional)</h3>
@@ -1766,22 +1709,20 @@
             <span id="wizard-wsl-status" style="margin-left:8px; color:var(--muted);"></span>
           </div>
         `;
-        document.getElementById('wizard-wsl-save').addEventListener('click', async () => {
-          const user = document.getElementById('wizard-wsl-user').value.trim();
-          const driverRoot = document.getElementById('wizard-driver-root').value.trim();
-          const libraryRoot = document.getElementById('wizard-library-root').value.trim();
+        safeAddListener('wizard-wsl-save', 'click', async () => {
+          const user = document.getElementById('wizard-wsl-user')?.value.trim() || '';
+          const driverRoot = document.getElementById('wizard-driver-root')?.value.trim() || '';
+          const libraryRoot = document.getElementById('wizard-library-root')?.value.trim() || '';
           const statusEl = document.getElementById('wizard-wsl-status');
-          statusEl.textContent = 'Saving...';
+          if (statusEl) statusEl.textContent = 'Saving...';
           try {
             const cfg = { wsl_username: user, wsl_driver_root: driverRoot, wsl_library_root: libraryRoot };
             await invokeSafe('save_driver_config_cmd', { cfg });
             __wizardState.wslSaved = true;
-            statusEl.textContent = 'Saved';
-          } catch (e) { statusEl.textContent = `Failed: ${e}`; }
+            if (statusEl) statusEl.textContent = 'Saved';
+          } catch (e) { if (statusEl) statusEl.textContent = `Failed: ${e}`; }
         });
-        document.getElementById('wizard-wsl-skip').addEventListener('click', () => {
-          __wizardState.wslSaved = false; wizardNext();
-        });
+        safeAddListener('wizard-wsl-skip', 'click', () => { __wizardState.wslSaved = false; wizardNext(); });
       } else if (__wizardState.step === 4) {
         body.innerHTML = `
           <h3>Done</h3>
@@ -1797,7 +1738,7 @@
           <li>Staging: ${__wizardState.stagingCreated ? 'Created' : 'Not created'}</li>
           <li>WSL configured: ${__wizardState.wslSaved ? 'Yes' : 'No'}</li>
         `;
-        document.getElementById('wizard-finish').addEventListener('click', wizardFinish);
+        safeAddListener('wizard-finish', 'click', wizardFinish);
       }
       // update prev/next visibility
       document.getElementById('wizard-prev').style.display = __wizardState.step > 1 ? 'inline-flex' : 'none';
@@ -1830,7 +1771,7 @@
         const installed = await invokeSafe('check_ollama_installed');
         if (!installed) {
           if (statusEl) statusEl.textContent = 'Ollama not installed.';
-          if (dlBtn) { dlBtn.style.display = 'inline-flex'; dlBtn.addEventListener('click', () => window.open('https://ollama.com/download','_blank')); }
+          if (dlBtn) { dlBtn.style.display = 'inline-flex'; safeAddListener(dlBtn, 'click', () => window.open('https://ollama.com/download','_blank')); }
           __wizardState.ollamaReady = false;
         } else {
           const running = await invokeSafe('check_ollama_running');
@@ -1839,11 +1780,14 @@
             __wizardState.ollamaReady = true;
           } else {
             if (statusEl) statusEl.textContent = 'Ollama installed but not running.';
-            if (startBtn) { startBtn.style.display = 'inline-flex'; startBtn.addEventListener('click', async () => {
-              startBtn.disabled = true; startBtn.textContent = 'Starting...';
-              try { await invokeSafe('start_ollama_server'); await new Promise(r => setTimeout(r,3000)); const now = await invokeSafe('check_ollama_running'); if (now) { statusEl.textContent = 'Ollama is running.'; __wizardState.ollamaReady = true; } else { statusEl.textContent = 'Failed to start Ollama.'; } } catch (e) { statusEl.textContent = 'Failed: ' + e; }
-              renderWizardStep();
-            }); }
+            if (startBtn) {
+              startBtn.style.display = 'inline-flex';
+              safeAddListener(startBtn, 'click', async () => {
+                startBtn.disabled = true; startBtn.textContent = 'Starting...';
+                try { await invokeSafe('start_ollama_server'); await new Promise(r => setTimeout(r,3000)); const now = await invokeSafe('check_ollama_running'); if (now) { if (statusEl) statusEl.textContent = 'Ollama is running.'; __wizardState.ollamaReady = true; } else { if (statusEl) statusEl.textContent = 'Failed to start Ollama.'; } } catch (e) { if (statusEl) statusEl.textContent = 'Failed: ' + e; }
+                renderWizardStep();
+              });
+            }
           }
         }
       } catch (e) { if (statusEl) statusEl.textContent = 'Error checking Ollama: ' + e; }
@@ -1905,7 +1849,7 @@
       try {
         const setupStatus = await invokeSafe('get_setup_status');
         if (setupStatus && setupStatus.first_run) {
-          setStatus('First run detected — running setup', 'info');
+          setStatus('First run detected - running setup', 'info');
           await showSetupWizard();
         }
       } catch (e) {
