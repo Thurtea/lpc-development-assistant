@@ -1284,32 +1284,84 @@
     // New Ollama and Staging Functions
 
     async function checkOllamaStatus() {
-      // FIXED: Better error handling in Settings tab Ollama section
-      const installedStatus = document.getElementById('ollama-installed-status');
-      const runningStatus = document.getElementById('ollama-running-status');
-      const downloadBtn = document.getElementById('download-ollama-btn');
-      const startBtn = document.getElementById('start-ollama-btn');
-      
+      const statusEl = document.getElementById('wizard-ollama-status');
+      const dlBtn = document.getElementById('wizard-ollama-download');
+      const startBtn = document.getElementById('wizard-ollama-start');
+      const readyEl = document.getElementById('wizard-ollama-ready');
+      if (statusEl) statusEl.textContent = 'Checking Ollama...';
+      if (dlBtn) dlBtn.style.display = 'none';
+      if (startBtn) startBtn.style.display = 'none';
+      if (readyEl) readyEl.style.display = 'none';
+
+      // helper: timeout wrapper
+      const withTimeout = (p, ms) => Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+
       try {
-        const installed = await invokeSafe('check_ollama_installed');
-        
-        if (installed) {
-          setStatusRow('ollama-installed-status', true, 'Ollama installed');
-          downloadBtn.style.display = 'none';
-          
+        let installed = false;
+        try {
+          installed = await withTimeout(invokeSafe('check_ollama_installed'), 5000);
+        } catch (err) {
+          if (statusEl) statusEl.textContent = 'Ollama check timed out or failed';
+          __wizardState.ollamaReady = false;
+          renderWizardStep();
+          return;
+        }
+
+        if (!installed) {
+          if (statusEl) statusEl.textContent = 'Ollama not installed.';
+          if (dlBtn) {
+            dlBtn.style.display = 'inline-flex';
+            safeAddListener(dlBtn, 'click', () => window.open('https://ollama.com/download','_blank'));
+          }
+          __wizardState.ollamaReady = false;
+        } else {
+          // installed -> check running with timeout
+          let running = false;
           try {
-            const running = await invokeSafe('check_ollama_running');
-            if (running) {
-              setStatusRow('ollama-running-status', true, 'Ollama server running');
-              startBtn.disabled = true;
-              await loadInstalledModels();
-            } else {
-              setStatusRow('ollama-running-status', false, 'Ollama server not running');
-              startBtn.disabled = false;
+            running = await withTimeout(invokeSafe('check_ollama_running'), 5000);
+          } catch (err) {
+            if (statusEl) statusEl.textContent = 'Ollama running check timed out';
+            __wizardState.ollamaReady = false;
+            renderWizardStep();
+            return;
+          }
+
+          if (running) {
+            if (statusEl) statusEl.textContent = '✅ Ollama is ready';
+            if (readyEl) readyEl.style.display = 'block';
+            __wizardState.ollamaReady = true;
+          } else {
+            if (statusEl) statusEl.textContent = 'Ollama installed but not running.';
+            if (startBtn) {
+              startBtn.style.display = 'inline-flex';
+              safeAddListener(startBtn, 'click', async () => {
+                startBtn.disabled = true; if (startBtn) startBtn.textContent = 'Starting...';
+                try {
+                  await invokeSafe('start_ollama_server');
+                  // wait briefly then re-check
+                  await new Promise(r => setTimeout(r, 3000));
+                  const now = await withTimeout(invokeSafe('check_ollama_running'), 5000);
+                  if (now) {
+                    if (statusEl) statusEl.textContent = '✅ Ollama is ready';
+                    if (readyEl) readyEl.style.display = 'block';
+                    __wizardState.ollamaReady = true;
+                  } else {
+                    if (statusEl) statusEl.textContent = 'Failed to start Ollama.';
+                  }
+                } catch (e) {
+                  if (statusEl) statusEl.textContent = 'Failed to start Ollama: ' + (e?.message || e);
+                }
+                renderWizardStep();
+              });
             }
-          } catch (runError) {
-            console.error('Failed to check Ollama running status:', runError);
-            setStatusRow('ollama-running-status', false, 'Ollama status unknown (is it running?)');
+            __wizardState.ollamaReady = false;
+          }
+        }
+      } catch (e) {
+        if (statusEl) statusEl.textContent = 'Error checking Ollama: ' + (e?.message || e);
+        __wizardState.ollamaReady = false;
+      }
+      renderWizardStep();
             startBtn.disabled = false;
           }
         } else {
@@ -1740,9 +1792,17 @@
         `;
         safeAddListener('wizard-finish', 'click', wizardFinish);
       }
-      // update prev/next visibility
-      document.getElementById('wizard-prev').style.display = __wizardState.step > 1 ? 'inline-flex' : 'none';
-      document.getElementById('wizard-next').textContent = __wizardState.step < 4 ? 'Next' : 'Finish';
+      // update prev/next visibility and enablement
+      const nextBtn = document.getElementById('wizard-next');
+      const prevBtn = document.getElementById('wizard-prev');
+      if (prevBtn) prevBtn.style.display = __wizardState.step > 1 ? 'inline-flex' : 'none';
+      if (nextBtn) nextBtn.textContent = __wizardState.step < 4 ? 'Next' : 'Finish';
+      // Disable Next on step 1 until Ollama is ready; otherwise enable
+      if (__wizardState.step === 1) {
+        if (nextBtn) nextBtn.disabled = !__wizardState.ollamaReady;
+      } else {
+        if (nextBtn) nextBtn.disabled = false;
+      }
     }
 
     async function wizardNext() {
@@ -1811,6 +1871,8 @@
           __wizardState.stagingCreated = true;
         }
       } catch (e) { statusEl.textContent = 'Failed: ' + e; }
+      // enable Next after creating staging
+      __wizardState.stagingCreated = true;
       renderWizardStep();
     }
 
