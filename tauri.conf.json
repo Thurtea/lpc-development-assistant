@@ -60,15 +60,15 @@
       "wix": {
         "language": "en-US"
       },
-      "nsis": {
-        "oneClick": false,
-        "perMachine": false,
-        "allowToChangeInstallationDirectory": true
-      },
       "webviewInstallMode": {
         "type": "embedBootstrapper"
       },
       "allowDowngrades": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     },
     "linux": {
       "deb": {
