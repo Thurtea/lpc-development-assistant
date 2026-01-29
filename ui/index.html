@@ -1362,20 +1362,6 @@
         __wizardState.ollamaReady = false;
       }
       renderWizardStep();
-            startBtn.disabled = false;
-          }
-        } else {
-          setStatusRow('ollama-installed-status', false, 'Ollama not installed');
-          setStatusRow('ollama-running-status', false, 'Ollama server unavailable');
-          downloadBtn.style.display = 'inline-block';
-          startBtn.disabled = true;
-        }
-      } catch (e) {
-        console.error('Failed to check Ollama status:', e);
-        setStatusRow('ollama-installed-status', false, `Check failed: ${e?.message || e}`);
-        setStatusRow('ollama-running-status', false, 'Could not verify');
-        toast(`Failed to check Ollama status: ${e?.message || e}`);
-      }
     }
 
     async function startOllamaServer() {
