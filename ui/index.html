@@ -1201,9 +1201,9 @@
         try {
           const el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
           if (el) el.addEventListener(event, handler);
-          else console.warn('Element not found for event binding:', idOrEl);
-        } catch (e) {
-          console.warn('Failed to bind listener for', idOrEl, e);
+          // Intentionally silent when element is missing to avoid noisy console warnings in production
+        } catch (_) {
+          // Swallow errors silently for robust binding in varied DOM states
         }
       }
 
