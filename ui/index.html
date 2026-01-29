@@ -391,6 +391,40 @@
       margin-bottom: 18px;
     }
 
+    /* Setup wizard modal */
+    .wizard-overlay {
+      position: fixed;
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 999999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .wizard-modal {
+      width: 820px;
+      max-width: 95%;
+      background: linear-gradient(180deg, #0f1724, #0b1220);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 18px;
+      color: var(--text);
+      box-shadow: 0 24px 60px rgba(2,6,23,0.7);
+    }
+
+    .wizard-steps { display: flex; gap: 8px; margin-bottom: 12px; }
+    .wizard-step { flex: 1; padding: 8px 10px; background: var(--panel-2); border-radius: 8px; text-align:center; font-weight:600; }
+    .wizard-step.active { background: linear-gradient(135deg,var(--accent),var(--accent-2)); color: #0b1016; }
+    .wizard-body { min-height: 160px; margin-bottom: 12px; }
+    .wizard-actions { display:flex; justify-content: space-between; gap: 8px; }
+    .wizard-actions .left { display:flex; gap:8px; }
+    .wizard-input { width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); }
+
     .action-btn {
       background: linear-gradient(135deg, var(--accent), var(--accent-2));
       border: none;
@@ -414,6 +448,64 @@
   </style>
 </head>
 <body>
+  <!-- First-run Setup Wizard Modal (hidden until needed) -->
+  <div id="setup-wizard-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99998;">
+    <div id="setup-wizard" style="max-width:920px; margin:6vh auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; color:var(--text); box-shadow:var(--shadow); position:relative;">
+      <h2 style="margin-top:0;">Welcome — First Run Setup</h2>
+      <div id="wizard-steps" style="min-height:260px;">
+        <div class="wizard-step" data-step="1">
+          <h3>Step 1 — Ollama</h3>
+          <p id="wizard-ollama-desc">Checking Ollama installation...</p>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button id="wizard-ollama-download" class="action-btn" style="display:none; background:transparent; color:var(--muted); border:1px solid var(--border);">Download Ollama</button>
+            <button id="wizard-ollama-start" class="action-btn" style="display:none;">Start Ollama</button>
+            <div id="wizard-ollama-ready" style="display:none; color:var(--success); align-self:center; font-weight:700;">✅ Ollama Ready</div>
+          </div>
+        </div>
+
+        <div class="wizard-step" data-step="2" style="display:none;">
+          <h3>Step 2 — Staging Directory</h3>
+          <p>Choose a staging directory where generated files will be saved before copying to your projects.</p>
+          <input id="wizard-staging-path" class="input" style="width:100%; margin-top:8px;" />
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button id="wizard-create-staging" class="action-btn">Create Directory</button>
+            <div id="wizard-staging-status" style="align-self:center; color:var(--muted);">Not created</div>
+          </div>
+        </div>
+
+        <div class="wizard-step" data-step="3" style="display:none;">
+          <h3>Step 3 — WSL / Driver Paths (Optional)</h3>
+          <p style="color:var(--muted);">Configure WSL paths for driver integration (you can skip this step).</p>
+          <label style="display:block; margin-top:8px;">WSL Username</label>
+          <input id="wizard-wsl-username" class="input" />
+          <label style="display:block; margin-top:8px;">Driver Root (WSL)</label>
+          <input id="wizard-driver-root" class="input" />
+          <label style="display:block; margin-top:8px;">Library Root (WSL)</label>
+          <input id="wizard-library-root" class="input" />
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button id="wizard-skip-wsl" class="action-btn" style="background:transparent; color:var(--muted); border:1px solid var(--border);">Skip</button>
+            <button id="wizard-save-wsl" class="action-btn">Save</button>
+            <div id="wizard-wsl-status" style="align-self:center; color:var(--muted);">Not saved</div>
+          </div>
+        </div>
+
+        <div class="wizard-step" data-step="4" style="display:none;">
+          <h3>Step 4 — Done</h3>
+          <p id="wizard-summary">Setup complete. You're ready to start using the app.</p>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+        <div>
+          <button id="wizard-prev" class="action-btn" style="display:none; background:transparent; color:var(--muted); border:1px solid var(--border);">Previous</button>
+          <button id="wizard-next" class="action-btn">Next</button>
+        </div>
+        <div>
+          <button id="wizard-cancel" class="action-btn" style="background:transparent; color:var(--muted); border:1px solid var(--border);">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <header>
     <div class="title">
       <div>
@@ -425,6 +517,30 @@
       <span class="pill">Model: qwen2.5-coder:7b</span>
     </div>
   </header>
+
+  <!-- First-run Setup Wizard Modal (hidden by default) -->
+  <div id="setup-wizard-overlay" class="wizard-overlay" role="dialog" aria-modal="true">
+    <div class="wizard-modal" id="setup-wizard">
+      <div class="wizard-steps">
+        <div class="wizard-step" data-step="1">1. Ollama</div>
+        <div class="wizard-step" data-step="2">2. Staging</div>
+        <div class="wizard-step" data-step="3">3. WSL</div>
+        <div class="wizard-step" data-step="4">4. Done</div>
+      </div>
+      <div class="wizard-body" id="wizard-body">
+        <!-- Step content injected by JS -->
+      </div>
+      <div class="wizard-actions">
+        <div class="left">
+          <button id="wizard-prev" class="action-btn" style="background:transparent; display:none;">Previous</button>
+        </div>
+        <div class="right">
+          <button id="wizard-skip" class="action-btn" style="background:transparent;">Skip</button>
+          <button id="wizard-next" class="action-btn">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="tabs-header">
     <button class="tab-btn active" data-tab="assistant">Assistant</button>
@@ -1584,6 +1700,186 @@
     let invoke;
     try { invoke = getInvoke(); } catch (e) { invoke = null; }
 
+    // First-run setup wizard state and functions
+    const __wizardState = { step: 1, ollamaReady: false, stagingCreated: false, wslSaved: false };
+
+    function showSetupWizard() {
+      const overlay = document.getElementById('setup-wizard-overlay');
+      const modal = document.getElementById('setup-wizard');
+      if (!overlay || !modal) return Promise.resolve();
+      overlay.style.display = 'flex';
+      document.body.style.pointerEvents = 'none';
+      modal.style.pointerEvents = 'auto';
+      renderWizardStep();
+      return new Promise(resolve => { window.__setupWizardResolve = resolve; });
+    }
+
+    function hideSetupWizard() {
+      const overlay = document.getElementById('setup-wizard-overlay');
+      if (overlay) overlay.style.display = 'none';
+      document.body.style.pointerEvents = '';
+    }
+
+    function renderWizardStep() {
+      const body = document.getElementById('wizard-body');
+      const steps = document.querySelectorAll('.wizard-step');
+      steps.forEach(s => s.classList.remove('active'));
+      const active = document.querySelector(`.wizard-step[data-step="${__wizardState.step}"]`);
+      if (active) active.classList.add('active');
+      if (!body) return;
+      if (__wizardState.step === 1) {
+        body.innerHTML = `
+          <h3>Ollama</h3>
+          <p>We will check if Ollama is installed and running.</p>
+          <div id="wizard-ollama-status" style="margin-top:8px; color:var(--muted);">Checking...</div>
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            <button id="wizard-ollama-download" class="action-btn" style="display:none; background:transparent;">Download Ollama</button>
+            <button id="wizard-ollama-start" class="action-btn" style="display:none;">Start Ollama</button>
+          </div>
+        `;
+        checkOllamaForWizard();
+      } else if (__wizardState.step === 2) {
+        const defaultPath = 'C:\\Users\\<your-user>\\AppData\\Local\\LPC Dev Assistant\\staging';
+        body.innerHTML = `
+          <h3>Staging Directory</h3>
+          <p>Set a staging directory where generated files will be saved. You can change this later.</p>
+          <input id="wizard-staging-input" class="wizard-input" value="${defaultPath}" />
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            <button id="wizard-staging-create" class="action-btn">Create Directory</button>
+            <span id="wizard-staging-status" style="margin-left:8px; color:var(--muted);"></span>
+          </div>
+        `;
+        document.getElementById('wizard-staging-create').addEventListener('click', createStagingDir);
+      } else if (__wizardState.step === 3) {
+        body.innerHTML = `
+          <h3>WSL Setup (optional)</h3>
+          <p>Configure WSL paths for driver integration. You can skip this step.</p>
+          <label>WSL Username</label>
+          <input id="wizard-wsl-user" class="wizard-input" placeholder="your-linux-username" />
+          <label style="margin-top:8px; display:block;">Driver Root Path (WSL)</label>
+          <input id="wizard-driver-root" class="wizard-input" placeholder="/home/username/amlp-driver" />
+          <label style="margin-top:8px; display:block;">Library Root Path (WSL)</label>
+          <input id="wizard-library-root" class="wizard-input" placeholder="/home/username/amlp-library" />
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            <button id="wizard-wsl-save" class="action-btn">Save</button>
+            <button id="wizard-wsl-skip" class="action-btn" style="background:transparent;">Skip</button>
+            <span id="wizard-wsl-status" style="margin-left:8px; color:var(--muted);"></span>
+          </div>
+        `;
+        document.getElementById('wizard-wsl-save').addEventListener('click', async () => {
+          const user = document.getElementById('wizard-wsl-user').value.trim();
+          const driverRoot = document.getElementById('wizard-driver-root').value.trim();
+          const libraryRoot = document.getElementById('wizard-library-root').value.trim();
+          const statusEl = document.getElementById('wizard-wsl-status');
+          statusEl.textContent = 'Saving...';
+          try {
+            const cfg = { wsl_username: user, wsl_driver_root: driverRoot, wsl_library_root: libraryRoot };
+            await invokeSafe('save_driver_config_cmd', { cfg });
+            __wizardState.wslSaved = true;
+            statusEl.textContent = 'Saved';
+          } catch (e) { statusEl.textContent = `Failed: ${e}`; }
+        });
+        document.getElementById('wizard-wsl-skip').addEventListener('click', () => {
+          __wizardState.wslSaved = false; wizardNext();
+        });
+      } else if (__wizardState.step === 4) {
+        body.innerHTML = `
+          <h3>Done</h3>
+          <p>Setup summary:</p>
+          <ul id="wizard-summary" style="color:var(--muted);"></ul>
+          <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+            <button id="wizard-finish" class="action-btn">Start Using LPC Dev Assistant</button>
+          </div>
+        `;
+        const sum = document.getElementById('wizard-summary');
+        sum.innerHTML = `
+          <li>Ollama: ${__wizardState.ollamaReady ? 'Ready' : 'Not ready'}</li>
+          <li>Staging: ${__wizardState.stagingCreated ? 'Created' : 'Not created'}</li>
+          <li>WSL configured: ${__wizardState.wslSaved ? 'Yes' : 'No'}</li>
+        `;
+        document.getElementById('wizard-finish').addEventListener('click', wizardFinish);
+      }
+      // update prev/next visibility
+      document.getElementById('wizard-prev').style.display = __wizardState.step > 1 ? 'inline-flex' : 'none';
+      document.getElementById('wizard-next').textContent = __wizardState.step < 4 ? 'Next' : 'Finish';
+    }
+
+    async function wizardNext() {
+      if (__wizardState.step === 1 && !__wizardState.ollamaReady) {
+        // require Ollama ready or allow proceed but warn; allow proceed
+      }
+      if (__wizardState.step === 2 && !__wizardState.stagingCreated) {
+        // allow proceeding but recommend creating; allow proceed
+      }
+      if (__wizardState.step < 4) {
+        __wizardState.step += 1; renderWizardStep();
+      } else {
+        // finish
+        await wizardFinish();
+      }
+    }
+
+    function wizardPrev() { if (__wizardState.step > 1) { __wizardState.step -= 1; renderWizardStep(); } }
+
+    async function checkOllamaForWizard() {
+      const statusEl = document.getElementById('wizard-ollama-status');
+      const dlBtn = document.getElementById('wizard-ollama-download');
+      const startBtn = document.getElementById('wizard-ollama-start');
+      if (statusEl) statusEl.textContent = 'Checking Ollama...';
+      try {
+        const installed = await invokeSafe('check_ollama_installed');
+        if (!installed) {
+          if (statusEl) statusEl.textContent = 'Ollama not installed.';
+          if (dlBtn) { dlBtn.style.display = 'inline-flex'; dlBtn.addEventListener('click', () => window.open('https://ollama.com/download','_blank')); }
+          __wizardState.ollamaReady = false;
+        } else {
+          const running = await invokeSafe('check_ollama_running');
+          if (running) {
+            if (statusEl) statusEl.textContent = 'Ollama is running.';
+            __wizardState.ollamaReady = true;
+          } else {
+            if (statusEl) statusEl.textContent = 'Ollama installed but not running.';
+            if (startBtn) { startBtn.style.display = 'inline-flex'; startBtn.addEventListener('click', async () => {
+              startBtn.disabled = true; startBtn.textContent = 'Starting...';
+              try { await invokeSafe('start_ollama_server'); await new Promise(r => setTimeout(r,3000)); const now = await invokeSafe('check_ollama_running'); if (now) { statusEl.textContent = 'Ollama is running.'; __wizardState.ollamaReady = true; } else { statusEl.textContent = 'Failed to start Ollama.'; } } catch (e) { statusEl.textContent = 'Failed: ' + e; }
+              renderWizardStep();
+            }); }
+          }
+        }
+      } catch (e) { if (statusEl) statusEl.textContent = 'Error checking Ollama: ' + e; }
+      renderWizardStep();
+    }
+
+    async function createStagingDir() {
+      const input = document.getElementById('wizard-staging-input');
+      const statusEl = document.getElementById('wizard-staging-status');
+      if (!input || !statusEl) return;
+      statusEl.textContent = 'Creating...';
+      try {
+        await invokeSafe('setup_staging_directory');
+        // refresh config
+        const cfg = await invokeSafe('get_driver_config');
+        if (cfg && cfg.staging_directory) {
+          statusEl.textContent = 'Created: ' + cfg.staging_directory;
+          __wizardState.stagingCreated = true;
+        } else {
+          statusEl.textContent = 'Created (verify in Settings)';
+          __wizardState.stagingCreated = true;
+        }
+      } catch (e) { statusEl.textContent = 'Failed: ' + e; }
+      renderWizardStep();
+    }
+
+    async function wizardFinish() {
+      try {
+        await invokeSafe('mark_setup_complete');
+      } catch (e) {
+        console.warn('mark_setup_complete failed', e);
+      }
+      hideSetupWizard();
+      if (window.__setupWizardResolve) { window.__setupWizardResolve(); window.__setupWizardResolve = null; }
+    }
+
     // Simple initialization pattern without complex timing issues
     window.addEventListener('DOMContentLoaded', async () => {
       console.log('DOM loaded, starting init...');
@@ -1604,7 +1900,18 @@
       await new Promise(r => setTimeout(r, 200));
       
       setStatus('Initializing...', 'info');
-      
+
+      // If first-run, show blocking setup wizard before continuing
+      try {
+        const setupStatus = await invokeSafe('get_setup_status');
+        if (setupStatus && setupStatus.first_run) {
+          setStatus('First run detected — running setup', 'info');
+          await showSetupWizard();
+        }
+      } catch (e) {
+        console.warn('Failed to get setup status for wizard:', e);
+      }
+
       // Test Tauri connection first
       try {
         if (!invoke) {
