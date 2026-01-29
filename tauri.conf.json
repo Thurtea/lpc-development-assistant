@@ -24,7 +24,7 @@
         "height": 900,
         "center": true,
         "resizable": true,
-        "maximized": false,
+        "maximized": true,
         "fullscreen": false,
         "decorations": true,
         "alwaysOnTop": false,
