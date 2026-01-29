@@ -436,6 +436,13 @@
       transition: transform 0.1s ease;
     }
 
+    .btn-ghost {
+      background: transparent !important;
+      border: 1px solid var(--border);
+      color: var(--muted) !important;
+      padding: 8px 12px;
+    }
+
     .action-btn:hover {
       transform: translateY(-2px);
     }
@@ -475,10 +482,10 @@
       </div>
       <div class="wizard-actions">
         <div class="left">
-          <button id="wizard-prev" class="action-btn" style="background:transparent; display:none;">Previous</button>
+          <button id="wizard-prev" class="action-btn btn-ghost" style="display:none;">Previous</button>
         </div>
         <div class="right">
-          <button id="wizard-skip" class="action-btn" style="background:transparent;">Skip</button>
+          <button id="wizard-skip" class="action-btn btn-ghost">Skip</button>
           <button id="wizard-next" class="action-btn">Next</button>
         </div>
       </div>
@@ -1264,6 +1271,14 @@
       safeAddListener('save-ollama-config-btn', 'click', saveOllamaConfig);
       safeAddListener('save-project-paths-btn', 'click', saveProjectPaths);
 
+      // Wizard controls (may be hidden/absent in non-first-run states)
+      safeAddListener('wizard-next', 'click', wizardNext);
+      safeAddListener('wizard-prev', 'click', wizardPrev);
+      safeAddListener('wizard-skip', 'click', () => {
+        hideSetupWizard();
+        if (window.__setupWizardResolve) { window.__setupWizardResolve(); window.__setupWizardResolve = null; }
+      });
+
       safeAddListener('test-driver-path-btn', 'click', async () => {
         toast('Testing driver path...');
         try { const result = await invokeSafe('test_driver_connection'); alert(result); } catch (e) { alert(`Test failed: ${e}`); }
@@ -1677,6 +1692,14 @@
       }
     }
 
+    // Global safeAddListener available to all modules
+    function safeAddListener(idOrEl, event, handler) {
+      try {
+        const el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
+        if (el) el.addEventListener(event, handler);
+      } catch (_) {}
+    }
+
     // Convenience: a direct invoke reference for legacy uses
     let invoke;
     try { invoke = getInvoke(); } catch (e) { invoke = null; }
@@ -1718,7 +1741,8 @@
             <button id="wizard-ollama-start" class="action-btn" style="display:none;">Start Ollama</button>
           </div>
         `;
-        checkOllamaForWizard();
+        // Use the centralized status checker with timeout
+        checkOllamaStatus();
       } else if (__wizardState.step === 2) {
         const defaultPath = 'C:\\Users\\<your-user>\\AppData\\Local\\LPC Dev Assistant\\staging';
         body.innerHTML = `
@@ -1807,38 +1831,7 @@
     }
 
     function wizardPrev() { if (__wizardState.step > 1) { __wizardState.step -= 1; renderWizardStep(); } }
-
-    async function checkOllamaForWizard() {
-      const statusEl = document.getElementById('wizard-ollama-status');
-      const dlBtn = document.getElementById('wizard-ollama-download');
-      const startBtn = document.getElementById('wizard-ollama-start');
-      if (statusEl) statusEl.textContent = 'Checking Ollama...';
-      try {
-        const installed = await invokeSafe('check_ollama_installed');
-        if (!installed) {
-          if (statusEl) statusEl.textContent = 'Ollama not installed.';
-          if (dlBtn) { dlBtn.style.display = 'inline-flex'; safeAddListener(dlBtn, 'click', () => window.open('https://ollama.com/download','_blank')); }
-          __wizardState.ollamaReady = false;
-        } else {
-          const running = await invokeSafe('check_ollama_running');
-          if (running) {
-            if (statusEl) statusEl.textContent = 'Ollama is running.';
-            __wizardState.ollamaReady = true;
-          } else {
-            if (statusEl) statusEl.textContent = 'Ollama installed but not running.';
-            if (startBtn) {
-              startBtn.style.display = 'inline-flex';
-              safeAddListener(startBtn, 'click', async () => {
-                startBtn.disabled = true; startBtn.textContent = 'Starting...';
-                try { await invokeSafe('start_ollama_server'); await new Promise(r => setTimeout(r,3000)); const now = await invokeSafe('check_ollama_running'); if (now) { if (statusEl) statusEl.textContent = 'Ollama is running.'; __wizardState.ollamaReady = true; } else { if (statusEl) statusEl.textContent = 'Failed to start Ollama.'; } } catch (e) { if (statusEl) statusEl.textContent = 'Failed: ' + e; }
-                renderWizardStep();
-              });
-            }
-          }
-        }
-      } catch (e) { if (statusEl) statusEl.textContent = 'Error checking Ollama: ' + e; }
-      renderWizardStep();
-    }
+    
 
     async function createStagingDir() {
       const input = document.getElementById('wizard-staging-input');
