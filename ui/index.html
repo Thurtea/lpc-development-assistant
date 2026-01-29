@@ -1868,10 +1868,17 @@
     // Simple initialization pattern without complex timing issues
     window.addEventListener('DOMContentLoaded', async () => {
       console.log('DOM loaded, starting init...');
-      // Try to prompt to start Ollama early if invoke is available (guarded)
+      // Try to check Ollama availability but do NOT auto-start it.
       try {
         if (typeof invoke !== 'undefined' && invoke) {
-          try { await checkAndStartOllama(); } catch (e) { console.warn('Early Ollama check failed:', e); }
+          try {
+            const available = await invokeSafe('check_ollama_available');
+            if (!available) {
+              console.log('Ollama not available at startup; will not auto-start without user consent.');
+            }
+          } catch (e) {
+            console.warn('Early Ollama availability check failed:', e);
+          }
         }
       } catch (_) {}
       
@@ -1975,25 +1982,41 @@
       }
     });
 
+    // Check availability; if user agrees, attempt to start the Ollama server once.
     async function checkAndStartOllama() {
       try {
         const available = await invokeSafe('check_ollama_available');
-        if (!available) {
-          const start = confirm('Ollama is not running. Would you like to start it?');
-          if (start) {
-            await invokeSafe('start_ollama_service');
-            await new Promise(r => setTimeout(r, 3000));
-            const nowAvailable = await invokeSafe('check_ollama_available');
-            if (nowAvailable) {
-              alert('Ollama started successfully!');
-              location.reload();
-            } else {
-              alert('Failed to start Ollama. Please start it manually.');
-            }
-          }
+        if (available) return true;
+
+        const start = confirm('Ollama is not running. Would you like to start it? (Recommended)');
+        if (!start) return false;
+
+        // Use the server-start command that the backend exposes.
+        try {
+          await invokeSafe('start_ollama_server');
+        } catch (startErr) {
+          console.error('start_ollama_server failed:', startErr);
+          alert('Failed to start Ollama automatically: ' + (startErr?.message || startErr));
+          return false;
         }
+
+        // Poll briefly for availability (one short attempt)
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const nowAvailable = await invokeSafe('check_ollama_available');
+          if (nowAvailable) {
+            alert('Ollama started successfully!');
+            return true;
+          }
+        } catch (e) {
+          console.warn('Post-start availability check failed', e);
+        }
+
+        alert('Could not confirm Ollama started. Please start it manually.');
+        return false;
       } catch (e) {
         console.warn('Ollama availability check failed', e);
+        return false;
       }
     }
 
